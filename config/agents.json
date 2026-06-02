@@ -22,5 +22,11 @@
     "name": "Trae",
     "skillsPath": "$HOME/.trae/skills",
     "enabled": true
+  },
+  {
+    "id": "hermes",
+    "name": "Hermes Agent",
+    "skillsPath": "$HERMES_HOME/skills",
+    "enabled": true
   }
 ]

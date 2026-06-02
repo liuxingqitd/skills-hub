@@ -13,9 +13,18 @@ const agentSchema = z.object({
 });
 
 function expandPath(p: string): string {
+  const home = homedir();
   return p
-    .replace(/^\$HOME/, homedir())
-    .replace(/^~/, homedir())
+    .replace(/^\$HOME/, home)
+    .replace(/^~/, home)
+    .replace(/\$HERMES_HOME/g, () => {
+      if (process.env.HERMES_HOME) return process.env.HERMES_HOME;
+      // Fallback: on Windows, %LOCALAPPDATA%\hermes; elsewhere, ~/.hermes
+      if (process.platform === "win32" && process.env.LOCALAPPDATA) {
+        return `${process.env.LOCALAPPDATA}\\hermes`;
+      }
+      return `${home}/.hermes`;
+    })
     .replace(/\$([A-Z_][A-Z0-9_]*)/g, (_, name) => process.env[name] ?? _);
 }
 

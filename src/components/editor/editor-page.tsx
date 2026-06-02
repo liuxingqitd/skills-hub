@@ -14,6 +14,7 @@ type EditorViewMode = "edit" | "preview" | "split";
 const agentLabels: Record<string, string> = {
   claude: "Claude",
   codex: "Codex",
+  hermes: "Hermes",
 };
 
 /* ============================================================

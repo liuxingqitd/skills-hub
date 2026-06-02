@@ -13,6 +13,7 @@ const agentIcons: Record<string, string> = {
   codex: "/icons/codex.svg",
   cursor: "/icons/cursor.svg",
   trae: "/icons/trae.svg",
+  hermes: "/icons/hermes.svg",
 };
 
 const statusLabels: Record<BoardDisplayStatus, string> = {

@@ -21,6 +21,7 @@ export class SaveInstructionError extends Error {
 type SharedOptions = {
   claudeRootDir?: string;
   codexRootDir?: string;
+  hermesRootDir?: string;
 };
 
 type UpdateInstructionInput = {
@@ -81,7 +82,12 @@ async function ensureWritableTarget(targetPath: string, rootPath: string) {
 function getRoots(options: SharedOptions) {
   return {
     claudeRootDir: options.claudeRootDir || join(homedir(), ".claude"),
-    codexRootDir: options.codexRootDir || process.env.CODEX_HOME || join(homedir(), ".codex")
+    codexRootDir: options.codexRootDir || process.env.CODEX_HOME || join(homedir(), ".codex"),
+    hermesRootDir: options.hermesRootDir
+      || process.env.HERMES_HOME
+      || (process.platform === "win32" && process.env.LOCALAPPDATA
+        ? join(process.env.LOCALAPPDATA, "hermes")
+        : join(homedir(), ".hermes"))
   };
 }
 
@@ -93,12 +99,16 @@ function resolveUpdateTarget(path: string, options: ReturnType<typeof getRoots>)
   const resolvedPath = resolve(path);
   const claudeRootFile = join(options.claudeRootDir, "CLAUDE.md");
   const codexMainFile = join(options.codexRootDir, "AGENTS.md");
+  const hermesMainFile = join(options.hermesRootDir, "AGENTS.md");
 
   if (resolvedPath === resolve(claudeRootFile)) {
     return { path: claudeRootFile, rootPath: options.claudeRootDir };
   }
   if (resolvedPath === resolve(codexMainFile)) {
     return { path: codexMainFile, rootPath: options.codexRootDir };
+  }
+  if (resolvedPath === resolve(hermesMainFile)) {
+    return { path: hermesMainFile, rootPath: options.hermesRootDir };
   }
 
   throw new SaveInstructionError("INVALID_PATH", "目标路径不在允许更新的全局规则范围内。");

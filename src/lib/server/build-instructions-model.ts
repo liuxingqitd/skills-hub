@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import { scanClaudeInstructions } from "@/src/lib/instructions/scan-claude-instructions";
 import { scanCodexInstructions } from "@/src/lib/instructions/scan-codex-instructions";
+import { scanHermesInstructions } from "@/src/lib/instructions/scan-hermes-instructions";
 import type { InstructionAsset, InstructionsPageModel } from "@/src/types/instructions";
 
 export async function buildInstructionsModel(
@@ -11,7 +12,8 @@ export async function buildInstructionsModel(
 ): Promise<InstructionsPageModel> {
   const surfaces = await Promise.all([
     scanClaudeInstructions(claudeRootDir),
-    scanCodexInstructions(codexRootDir)
+    scanCodexInstructions(codexRootDir),
+    scanHermesInstructions()
   ]);
 
   const assets = surfaces
