@@ -145,7 +145,16 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`同步失败：${res.status}`);
-      addToast("同步完成");
+      const result = await res.json();
+      if (result.failed?.length > 0) {
+        const reasons = result.failed.map((f: { agentName: string; error: string }) => `${f.agentName}: ${f.error}`).join("；");
+        throw new Error(`同步失败：${reasons}`);
+      }
+      if (result.completed?.length > 0) {
+        addToast(`同步完成（${result.completed.length} 项）`);
+      } else {
+        addToast("无需同步");
+      }
       refresh();
     } catch (err) {
       setSyncError(err instanceof Error ? err.message : "同步失败");
@@ -518,7 +527,7 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
       <ConfirmDialog
         open={showDeleteConfirm}
         title={`删除「${filteredSkill?.name ?? ""}」`}
-        text="此操作将从所有 Agent 中删除此 Skill 的副本。Skill 源文件不会被删除。"
+        text="此操作将从所有 Agent 及源目录中彻底删除此 Skill，不可恢复。"
         confirmLabel="删除"
         danger
         onConfirm={handleDeleteSkill}
@@ -878,7 +887,7 @@ function SkillDetailDrawer({
             onClick={onDeleteClick}
             disabled={uiLocked}
           >
-            <Trash2 size={12} /> 删除副本
+            <Trash2 size={12} /> 删除 Skill
           </button>
         </div>
       </div>

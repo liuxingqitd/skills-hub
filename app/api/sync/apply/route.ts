@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { applySyncPlan } from "@/src/lib/sync/apply-sync-plan";
 import { buildOverviewModel } from "@/src/lib/server/build-overview-model";
+import { SOURCE_SKILLS_DIR } from "@/src/lib/skills/scan-source-skills";
 import type { SyncActionType } from "@/src/types/sync";
 
 const VALID_ACTION_TYPES = new Set<string>([
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
   };
   const result = await applySyncPlan(filteredPlan, {
     pruneOrphans: Boolean(payload?.pruneOrphans),
-    allowedSourceRoots: model.agents.map((a) => a.skillsPath)
+    allowedSourceRoots: [SOURCE_SKILLS_DIR, ...model.agents.map((a) => a.skillsPath)]
   });
 
   return NextResponse.json(result);

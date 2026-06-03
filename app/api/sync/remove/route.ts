@@ -4,6 +4,8 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 
 import { buildOverviewModel } from "@/src/lib/server/build-overview-model";
+import { SOURCE_SKILLS_DIR } from "@/src/lib/skills/scan-source-skills";
+import { readCustomSkills, writeCustomSkills } from "@/src/lib/config/custom-skills-store";
 
 export async function DELETE(request: Request) {
   const payload = await request.json().catch(() => ({}));
@@ -14,9 +16,15 @@ export async function DELETE(request: Request) {
   }
 
   const model = await buildOverviewModel();
+
+  // Verify the skill exists in the model at all
+  if (!model.skills.some((s) => s.name === skillName)) {
+    return NextResponse.json({ ok: false, error: "Skill not found" }, { status: 404 });
+  }
+
   const agentById = new Map(model.agents.map((a) => [a.id, a]));
 
-  const installedPaths: string[] = [];
+  const removedPaths: string[] = [];
   for (const state of Object.values(model.agentStates).flat()) {
     if (state.skillName === skillName && state.exists) {
       const resolvedTarget = path.resolve(state.targetPath);
@@ -26,15 +34,21 @@ export async function DELETE(request: Request) {
       if (!resolvedTarget.startsWith(resolvedRoot + path.sep)) {
         throw new Error(`Path traversal detected: ${state.targetPath}`);
       }
-      installedPaths.push(resolvedTarget);
+      removedPaths.push(resolvedTarget);
     }
   }
 
-  if (installedPaths.length === 0) {
-    return NextResponse.json({ ok: false, error: "Skill is not installed in any agent" }, { status: 404 });
+  // Always try to remove from source directory as well (force: true handles non-existent)
+  const sourceSkillPath = path.join(SOURCE_SKILLS_DIR, skillName);
+  removedPaths.push(sourceSkillPath);
+
+  await Promise.all(removedPaths.map((p) => rm(p, { recursive: true, force: true })));
+
+  // Also clean up custom-skills.json entry
+  const customSkills = await readCustomSkills();
+  if (customSkills.includes(skillName)) {
+    await writeCustomSkills(customSkills.filter((n) => n !== skillName));
   }
 
-  await Promise.all(installedPaths.map((p) => rm(p, { recursive: true, force: true })));
-
-  return NextResponse.json({ ok: true, removed: installedPaths });
+  return NextResponse.json({ ok: true, removed: removedPaths });
 }

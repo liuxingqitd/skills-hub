@@ -187,5 +187,15 @@
     "order": 7,
     "isPreset": false,
     "keywords": []
+  },
+  {
+    "id": "cat-mpxn360v",
+    "name": "前端设计",
+    "icon": "🎨",
+    "desc": "UI/UX设计",
+    "color": "oklch(55% 0.15 240)",
+    "order": 8,
+    "isPreset": false,
+    "keywords": []
   }
 ]
