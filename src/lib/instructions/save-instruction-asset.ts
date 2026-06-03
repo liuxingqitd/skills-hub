@@ -1,8 +1,9 @@
-import { lstat, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
+import { lstat, mkdir, realpath, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, resolve, sep } from "node:path";
 
 import { hashInstructionContent } from "@/src/lib/instructions/hash-instruction-content";
+import { readPreview } from "@/src/lib/instructions/read-preview";
 
 export type InstructionWriteErrorCode =
   | "STALE_CONTENT"
@@ -29,14 +30,6 @@ type UpdateInstructionInput = {
   content: string;
   previousHash: string | null;
 };
-
-async function readContent(path: string) {
-  try {
-    return await readFile(path, "utf8");
-  } catch {
-    return null;
-  }
-}
 
 function ensurePathInside(realRoot: string, realCandidate: string) {
   // 两个参数必须已经通过 realpath 展开，此函数只做字符串比较
@@ -76,6 +69,7 @@ async function ensureWritableTarget(targetPath: string, rootPath: string) {
     if (error instanceof SaveInstructionError) {
       throw error;
     }
+    throw new SaveInstructionError("INVALID_PATH", "无法验证目标路径: " + (error as Error).message);
   }
 }
 
@@ -120,7 +114,7 @@ export async function updateInstructionAsset(
 ) {
   const roots = getRoots(options);
   const target = resolveUpdateTarget(input.path, roots);
-  const currentContent = await readContent(target.path);
+  const currentContent = await readPreview(target.path);
 
   if (currentContent === null) {
     throw new SaveInstructionError("NOT_FOUND", "目标文件不存在，请重新加载后再试。");

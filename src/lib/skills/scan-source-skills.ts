@@ -12,7 +12,16 @@ export const SOURCE_SKILLS_DIR =
 export async function scanSourceSkills(
   sourceDir: string = SOURCE_SKILLS_DIR
 ): Promise<SkillRecord[]> {
-  const entries = await readdir(sourceDir, { withFileTypes: true });
+  let entries;
+  try {
+    entries = await readdir(sourceDir, { withFileTypes: true });
+  } catch (error: unknown) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ENOENT") {
+      return [];
+    }
+    throw error;
+  }
   const scannedSkills: Array<SkillRecord | null> = await Promise.all(
     entries
       .filter((entry) => entry.isDirectory() && !isReservedSkillEntry(entry.name))

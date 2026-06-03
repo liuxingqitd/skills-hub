@@ -1,5 +1,3 @@
-import { readFile } from "node:fs/promises";
-
 import { buildOverviewModel } from "@/src/lib/server/build-overview-model";
 import { readCustomSkills } from "@/src/lib/config/custom-skills-store";
 import { readCategories } from "@/src/lib/config/categories-store";
@@ -16,14 +14,6 @@ const DISPLAY_STATUS: Record<InstallStatus, SkillBoardCell["displayStatus"]> = {
   orphaned: "installed"
 };
 
-async function readSkillContent(skillFilePath: string) {
-  try {
-    return await readFile(skillFilePath, "utf8");
-  } catch {
-    return "未找到 SKILL.md。";
-  }
-}
-
 export async function buildSkillBoardModel(): Promise<SkillBoardModel> {
   const [overview, customNames, categories, skillCatMap] = await Promise.all([
     buildOverviewModel(),
@@ -32,9 +22,7 @@ export async function buildSkillBoardModel(): Promise<SkillBoardModel> {
     readSkillCategories(),
   ]);
   const customSet = new Set(customNames);
-  const rows: SkillBoardRow[] = await Promise.all(
-    overview.registryRows.map(async (row) => {
-      const skillContent = await readSkillContent(row.skillFilePath);
+  const rows: SkillBoardRow[] = overview.registryRows.map((row) => {
       const cells = row.states.map((state) => ({
         agentId: state.agentId,
         agentName: state.agentName,
@@ -42,7 +30,6 @@ export async function buildSkillBoardModel(): Promise<SkillBoardModel> {
         displayStatus: DISPLAY_STATUS[state.status],
         targetPath: state.targetPath,
         detail: state.detail,
-        linkTarget: state.linkTarget,
         exists: state.exists
       }));
       const missingCount = row.states.filter(
@@ -58,7 +45,6 @@ export async function buildSkillBoardModel(): Promise<SkillBoardModel> {
         description: row.description,
         sourcePath: row.sourcePath || row.states.find((state) => state.sourcePath)?.sourcePath || "",
         skillFilePath: row.skillFilePath,
-        skillContent,
         canSync: missingCount > 0,
         missingCount,
         categoryIds,
@@ -66,8 +52,7 @@ export async function buildSkillBoardModel(): Promise<SkillBoardModel> {
         raw: row,
         isCustom: customSet.has(row.name)
       };
-    })
-  );
+  });
 
   return {
     agents: overview.agents,

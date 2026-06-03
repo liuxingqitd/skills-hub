@@ -6,16 +6,11 @@ import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-import type { InstructionAsset, InstructionsPageModel } from "@/src/types/instructions";
+import type { InstructionsPageModel } from "@/src/types/instructions";
 import { useToast } from "@/src/components/ui/toast";
 
 type EditorViewMode = "edit" | "preview" | "split";
 
-const agentLabels: Record<string, string> = {
-  claude: "Claude",
-  codex: "Codex",
-  hermes: "Hermes",
-};
 
 /* ============================================================
    Editor Page
@@ -70,8 +65,8 @@ export function EditorPage() {
     setSaveError(null);
   }, [baseContent, selected?.id]);
 
-  async function handleSave() {
-    if (!selected?.exists || !canSave) return;
+  async function handleSave(): Promise<boolean> {
+    if (!selected?.exists || !canSave) return false;
     setIsSaving(true);
     setSaveError(null);
     try {
@@ -90,20 +85,13 @@ export function EditorPage() {
       }
       await loadInstructions();
       addToast(`${selected.title} 已保存`);
+      return true;
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "保存失败");
+      return false;
     } finally {
       setIsSaving(false);
     }
-  }
-
-  async function handleSaveAll() {
-    if (isSaving) return;
-    // Save current file first
-    if (canSave) {
-      await handleSave();
-    }
-    addToast("全部文件已保存");
   }
 
   // Cmd+S
@@ -136,10 +124,10 @@ export function EditorPage() {
         <div className="topbar-right">
           <button
             className="btn btn-ghost btn-sm"
-            onClick={handleSaveAll}
-            disabled={isSaving || !assets.some((a) => a.exists)}
+            onClick={handleSave}
+            disabled={!canSave}
           >
-            <Save size={14} /> 全部保存
+            <Save size={14} /> 保存
           </button>
         </div>
       </div>

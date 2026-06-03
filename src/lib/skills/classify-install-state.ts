@@ -34,8 +34,6 @@ export async function classifyInstallState(
     sourcePath: skill.sourcePath,
     targetPath,
     exists: false,
-    isSymlink: false,
-    linkTarget: null,
     isManaged: false,
     detail: "目标目录中尚未安装。"
   };
@@ -87,8 +85,6 @@ export function buildOrphanedState(
     sourcePath: null,
     targetPath,
     exists: true,
-    isSymlink: false,
-    linkTarget: null,
     isManaged: false,
     detail: "目标目录存在，但没有找到对应的主源技能。"
   };

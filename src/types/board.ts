@@ -11,7 +11,6 @@ export type SkillBoardCell = {
   displayStatus: BoardDisplayStatus;
   targetPath: string;
   detail: string;
-  linkTarget: string | null;
   exists: boolean;
 };
 
@@ -20,7 +19,6 @@ export type SkillBoardRow = {
   description: string;
   sourcePath: string;
   skillFilePath: string;
-  skillContent: string;
   canSync: boolean;
   missingCount: number;
   categoryIds: string[];

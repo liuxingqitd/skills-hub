@@ -14,8 +14,6 @@ describe("buildSyncPlan", () => {
         sourcePath: "/source/frontend-design",
         targetPath: "/target/frontend-design",
         exists: false,
-        isSymlink: false,
-        linkTarget: null,
         isManaged: false,
         detail: "missing"
       },
@@ -27,8 +25,6 @@ describe("buildSyncPlan", () => {
         sourcePath: "/source/copywriting",
         targetPath: "/target/copywriting",
         exists: true,
-        isSymlink: true,
-        linkTarget: "/other/copywriting",
         isManaged: false,
         detail: "drifted"
       }

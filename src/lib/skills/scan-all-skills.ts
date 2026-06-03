@@ -19,7 +19,14 @@ async function scanAgentSkillNames(agent: AgentDefinition): Promise<string[]> {
     return entries
       .filter((e) => e.isDirectory() && !isReservedSkillEntry(e.name))
       .map((e) => e.name);
-  } catch {
+  } catch (error: unknown) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code !== "ENOENT") {
+      console.warn(
+        `[skills-hub] 无法扫描代理 "${agent.id}" 的技能目录 ${agent.skillsPath}：`,
+        (error as Error).message
+      );
+    }
     return [];
   }
 }

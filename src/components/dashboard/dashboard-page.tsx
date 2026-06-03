@@ -1,10 +1,8 @@
 "use client";
 
 import {
-  useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   useTransition,
 } from "react";
@@ -66,6 +64,11 @@ type InstallResult = {
    Dashboard Page
    ============================================================ */
 
+const Icons = {
+  grid: <Grid3X3 size={16} />,
+  list: <List size={16} />,
+};
+
 export function DashboardPage({ model }: { model: SkillBoardModel }) {
   const router = useRouter();
   const { addToast } = useToast();
@@ -84,6 +87,8 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showCategoryEditor, setShowCategoryEditor] = useState(false);
   const [draftCategoryIds, setDraftCategoryIds] = useState<string[]>([]);
+  const [skillContent, setSkillContent] = useState<string | null>(null);
+  const [isLoadingContent, setIsLoadingContent] = useState(false);
 
   const uiLocked = isPending || busyAction !== null;
 
@@ -224,6 +229,35 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [selectedSkill]);
 
+  // ---- Lazy-load skill content when a skill is selected ----
+  useEffect(() => {
+    if (!selectedSkill) {
+      setSkillContent(null);
+      return;
+    }
+    let cancelled = false;
+    setIsLoadingContent(true);
+    setSkillContent(null);
+    const url = `/api/skills/content?path=${encodeURIComponent(selectedSkill.skillFilePath)}`;
+    fetch(url)
+      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+      .then((data) => {
+        if (!cancelled) {
+          setSkillContent(data.content ?? "未找到 SKILL.md。");
+          setIsLoadingContent(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSkillContent("未找到 SKILL.md。");
+          setIsLoadingContent(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedSkill]);
+
   // ---- Reset category editor when a different skill is selected ----
   useEffect(() => {
     if (filteredSkill) {
@@ -231,12 +265,6 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
       setShowCategoryEditor(false);
     }
   }, [filteredSkill?.name]);
-
-  // ---- Icons ----
-  const Icons = {
-    grid: <Grid3X3 size={16} />,
-    list: <List size={16} />,
-  };
 
   return (
     <div className="main">

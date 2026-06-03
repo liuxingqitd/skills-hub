@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { loadAgents } from "@/src/lib/config/load-agents";
 import { scanAgentStates } from "@/src/lib/skills/scan-agent-skills";
 import { scanAllSkills } from "@/src/lib/skills/scan-all-skills";
+import { scanSourceSkills } from "@/src/lib/skills/scan-source-skills";
 import { summarizeStates } from "@/src/lib/skills/classify-install-state";
 import { buildSyncPlan } from "@/src/lib/sync/build-sync-plan";
 import type { AgentDefinition } from "@/src/types/agents";
@@ -18,9 +19,30 @@ export type OverviewModel = {
   syncPlan: ReturnType<typeof buildSyncPlan>;
 };
 
+function mergeSkills(agentSkills: SkillRecord[], sourceSkills: SkillRecord[]): SkillRecord[] {
+  const merged = new Map<string, SkillRecord>();
+
+  for (const skill of agentSkills) {
+    merged.set(skill.name, skill);
+  }
+
+  for (const skill of sourceSkills) {
+    const existing = merged.get(skill.name);
+    if (!existing || new Date(skill.updatedAt) > new Date(existing.updatedAt)) {
+      merged.set(skill.name, skill);
+    }
+  }
+
+  return Array.from(merged.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export async function buildOverviewModel(): Promise<OverviewModel> {
   const agents = await loadAgents();
-  const skills = await scanAllSkills(agents);
+  const [agentSkills, sourceSkills] = await Promise.all([
+    scanAllSkills(agents),
+    scanSourceSkills(),
+  ]);
+  const skills = mergeSkills(agentSkills, sourceSkills);
 
   const entries = await Promise.all(
     agents.map(async (agent) => [agent.id, await scanAgentStates(agent, skills)] as const)
@@ -42,8 +64,6 @@ export async function buildOverviewModel(): Promise<OverviewModel> {
     sourcePath,
     targetPath: join(agent.skillsPath, skillName),
     exists: false,
-    isSymlink: false,
-    linkTarget: null,
     isManaged: false,
     detail: "目标目录中尚未安装。"
   });

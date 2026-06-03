@@ -21,7 +21,10 @@ export async function readCategories(): Promise<Category[]> {
   try {
     const raw = await readFile(CATEGORIES_PATH, "utf-8");
     return z.array(categorySchema).parse(JSON.parse(raw));
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn("Failed to read categories:", err);
+    }
     return [];
   }
 }

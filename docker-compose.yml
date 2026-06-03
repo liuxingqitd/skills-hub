@@ -2,11 +2,14 @@ services:
   app:
     build: .
     ports:
-      - "5175:3000"
+      - "127.0.0.1:5175:3000"
     volumes:
       - .:/app                          # 源码挂载，支持热更新
       - /app/node_modules               # 保留容器内编译的 node_modules
-      - /Users/liuxingqi:/home/node     # 宿主机 home → 容器 home，供 homedir() 使用
+      - ${HOME}/.claude:/home/node/.claude:ro
+      - ${HOME}/.codex:/home/node/.codex:ro
+      - ${HOME}/.cursor:/home/node/.cursor:ro
+      - ${HOME}/.trae:/home/node/.trae:ro
     environment:
       - HOME=/home/node                 # 让 Node.js os.homedir() 返回宿主机目录
       - NODE_ENV=development

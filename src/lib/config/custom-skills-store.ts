@@ -8,7 +8,10 @@ export async function readCustomSkills(): Promise<string[]> {
     const raw = await readFile(STORE_PATH, "utf8");
     const parsed: unknown = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn("Failed to read custom skills:", err);
+    }
     return [];
   }
 }

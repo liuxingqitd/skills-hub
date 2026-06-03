@@ -21,7 +21,10 @@ export async function readSkillCategories(): Promise<Record<string, string[]>> {
       return result;
     }
     return {};
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn("Failed to read skill categories:", err);
+    }
     return {};
   }
 }

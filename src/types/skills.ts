@@ -24,8 +24,6 @@ export type SkillInstallState = {
   sourcePath: string | null;
   targetPath: string;
   exists: boolean;
-  isSymlink: boolean;
-  linkTarget: string | null;
   isManaged: boolean;
   detail: string;
 };

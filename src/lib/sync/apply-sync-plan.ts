@@ -1,4 +1,4 @@
-import { cp, mkdir, rm } from "node:fs/promises";
+import { cp, mkdir, rename, rm } from "node:fs/promises";
 import { dirname, resolve, sep } from "node:path";
 
 import type { SyncExecutionResult, SyncPlan } from "@/src/types/sync";
@@ -62,10 +62,11 @@ export async function applySyncPlan(
         throw new Error(`Source path is outside all managed agent directories: ${action.sourcePath}`);
       }
 
-      // 复制前先清除目标（类型可能不匹配，如文件 vs 目录）
+      // 先复制到临时目录，再原子替换目标，避免 cp 失败时已删除原目录导致数据丢失
+      const tmpTarget = action.targetPath + ".tmp-" + Date.now();
+      await copySkill(action.sourcePath, tmpTarget);
       await rm(action.targetPath, { recursive: true, force: true });
-
-      await copySkill(action.sourcePath, action.targetPath);
+      await rename(tmpTarget, action.targetPath);
       result.completed.push(action);
     } catch (error) {
       result.failed.push({

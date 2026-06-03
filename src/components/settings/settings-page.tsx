@@ -90,12 +90,11 @@ export function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (res.ok) {
-        const created = (await res.json()) as Category;
-        setCategories((prev) => [...prev, created]);
-        setShowAddModal(false);
-        addToast(`已添加分类「${data.name}」`);
-      }
+      if (!res.ok) throw new Error(`Add failed: ${res.status}`);
+      const created = (await res.json()) as Category;
+      setCategories((prev) => [...prev, created]);
+      setShowAddModal(false);
+      addToast(`已添加分类「${data.name}」`);
     } catch {
       addToast("添加失败");
     }
@@ -108,12 +107,11 @@ export function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, ...data }),
       });
-      if (res.ok) {
-        const updated = (await res.json()) as Category;
-        setCategories((prev) => prev.map((c) => (c.id === id ? updated : c)));
-        setEditingCat(null);
-        addToast(`已更新分类「${data.name}」`);
-      }
+      if (!res.ok) throw new Error(`Edit failed: ${res.status}`);
+      const updated = (await res.json()) as Category;
+      setCategories((prev) => prev.map((c) => (c.id === id ? updated : c)));
+      setEditingCat(null);
+      addToast(`已更新分类「${data.name}」`);
     } catch {
       addToast("更新失败");
     }
@@ -122,38 +120,57 @@ export function SettingsPage() {
   async function handleDelete(id: string) {
     try {
       const res = await fetch(`/api/categories?id=${id}`, { method: "DELETE" });
-      if (res.ok) {
-        setCategories((prev) => prev.filter((c) => c.id !== id));
-        setDeletingCat(null);
-        addToast("已删除分类");
-      }
+      if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
+      setCategories((prev) => prev.filter((c) => c.id !== id));
+      setDeletingCat(null);
+      addToast("已删除分类");
     } catch {
       addToast("删除失败");
     }
   }
 
   async function handleRestoreDefaults() {
+    setShowRestoreConfirm(false);
     try {
-      // Delete all in parallel, then add presets in parallel
-      await Promise.all(
-        categories.map((cat) =>
-          fetch(`/api/categories?id=${cat.id}`, { method: "DELETE" })
-        )
+      // Delete all existing categories — use allSettled so one failure doesn't abort the rest
+      const deleteResults = await Promise.allSettled(
+        categories.map(async (cat) => {
+          const res = await fetch(`/api/categories?id=${cat.id}`, { method: "DELETE" });
+          if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
+          return res;
+        })
       );
-      await Promise.all(
-        DEFAULT_PRESETS.map((preset) =>
-          fetch("/api/categories", {
+      const deleteFailed = deleteResults.filter((r) => r.status === "rejected").length;
+
+      // Create preset categories — likewise use allSettled for resilience
+      const createResults = await Promise.allSettled(
+        DEFAULT_PRESETS.map(async (preset) => {
+          const res = await fetch("/api/categories", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(preset),
-          })
-        )
+          });
+          if (!res.ok) throw new Error(`Create failed: ${res.status}`);
+          return res;
+        })
       );
+      const createFailed = createResults.filter((r) => r.status === "rejected").length;
+
+      // Always resync UI state with server state to recover consistency
       await loadCategories();
-      setShowRestoreConfirm(false);
-      addToast("已恢复预设分类");
+
+      if (deleteFailed === 0 && createFailed === 0) {
+        addToast("已恢复预设分类");
+      } else {
+        const parts: string[] = [];
+        if (deleteFailed > 0) parts.push(`${deleteFailed} 个分类删除失败`);
+        if (createFailed > 0) parts.push(`${createFailed} 个分类创建失败`);
+        addToast(`恢复部分完成：${parts.join("，")}，已重新同步状态`);
+      }
     } catch {
-      addToast("恢复失败");
+      // Recovery: resync UI state with server on any unexpected failure
+      try { await loadCategories(); } catch { /* ignore */ }
+      addToast("恢复失败，已重新加载分类状态");
     }
   }
 
