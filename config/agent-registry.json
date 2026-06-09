@@ -1,0 +1,51 @@
+[
+  {
+    "id": "claude",
+    "name": "Claude Code",
+    "skillsPath": "$HOME/.claude/skills",
+    "description": "Anthropic 官方 CLI Agent，支持多模型、MCP 工具扩展",
+    "homepage": "https://claude.ai/code"
+  },
+  {
+    "id": "codex",
+    "name": "Codex",
+    "skillsPath": "$HOME/.codex/skills",
+    "description": "OpenAI 推出的终端 AI 编程助手，支持 GPT-5 等模型",
+    "homepage": "https://github.com/openai/codex"
+  },
+  {
+    "id": "cursor",
+    "name": "Cursor",
+    "skillsPath": "$HOME/.cursor/skills",
+    "description": "基于 VS Code 的 AI-first 编辑器，内置 Chat 和 Composer",
+    "homepage": "https://cursor.com"
+  },
+  {
+    "id": "trae",
+    "name": "Trae",
+    "skillsPath": "$HOME/.trae/skills",
+    "description": "字节跳动推出的 AI IDE，支持 Builder 模式自动编程",
+    "homepage": "https://trae.ai"
+  },
+  {
+    "id": "hermes",
+    "name": "Hermes Agent",
+    "skillsPath": "$HERMES_HOME/skills",
+    "description": "开源 AI 编码助手，支持自定义 Agent 编排",
+    "homepage": "https://github.com/hermes-agent/hermes"
+  },
+  {
+    "id": "codebuddy",
+    "name": "CodeBuddy",
+    "skillsPath": "$HOME/.codebuddy/skills",
+    "description": "腾讯云推出的 AI IDE，支持智能编码和 Agent 模式",
+    "homepage": "https://www.codebuddy.cn/ide/"
+  },
+  {
+    "id": "antigravity",
+    "name": "Antigravity",
+    "skillsPath": "$HOME/.antigravity/skills",
+    "description": "Google 推出的 AI IDE，面向 Agent-first 时代的智能开发环境",
+    "homepage": "https://antigravity.google/"
+  }
+]

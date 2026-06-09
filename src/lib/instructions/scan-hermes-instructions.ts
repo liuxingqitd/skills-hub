@@ -32,7 +32,7 @@ export async function scanHermesInstructions(
       status: rootMainContent !== null ? "found" : "missing",
       path: rootMain,
       exists: rootMainContent !== null,
-      title: `${hermesRootDir}/AGENTS.md`,
+      title: "~/.hermes/AGENTS.md",
       description: "Hermes Agent 的用户级全局指令文件。",
       loadBehavior: "作为 Hermes 的用户级基础说明，对所有 Hermes 工作区提供默认行为约束。",
       priority: 0,

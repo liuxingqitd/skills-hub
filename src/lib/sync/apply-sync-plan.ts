@@ -1,17 +1,15 @@
-import { cp, mkdir, rename, rm } from "node:fs/promises";
-import { dirname, resolve, sep } from "node:path";
+import { rm } from "node:fs/promises";
+import { resolve, sep } from "node:path";
 
+import { deploySkill, repairSkill } from "@/src/lib/sync/link-skill";
+import type { SyncMode } from "@/src/lib/config/settings-store";
 import type { SyncExecutionResult, SyncPlan } from "@/src/types/sync";
 
 type ApplyOptions = {
+  syncMode?: SyncMode;
   pruneOrphans?: boolean;
   allowedSourceRoots?: string[];
 };
-
-async function copySkill(sourcePath: string, targetPath: string) {
-  await mkdir(dirname(targetPath), { recursive: true });
-  await cp(sourcePath, targetPath, { recursive: true });
-}
 
 function isSourceAllowed(sourcePath: string, allowedRoots: string[]): boolean {
   const resolvedSource = resolve(sourcePath);
@@ -25,6 +23,7 @@ export async function applySyncPlan(
   plan: SyncPlan,
   options: ApplyOptions = {}
 ): Promise<SyncExecutionResult> {
+  const mode = options.syncMode ?? "copy";
   const result: SyncExecutionResult = {
     completed: [],
     skipped: [],
@@ -53,7 +52,6 @@ export async function applySyncPlan(
         throw new Error("Missing source path for sync action.");
       }
 
-      // 安全检查：sourcePath 必须在某个已知 agent 目录下
       if (
         options.allowedSourceRoots &&
         options.allowedSourceRoots.length > 0 &&
@@ -62,11 +60,11 @@ export async function applySyncPlan(
         throw new Error(`Source path is outside all managed agent directories: ${action.sourcePath}`);
       }
 
-      // 先复制到临时目录，再原子替换目标，避免 cp 失败时已删除原目录导致数据丢失
-      const tmpTarget = action.targetPath + ".tmp-" + Date.now();
-      await copySkill(action.sourcePath, tmpTarget);
-      await rm(action.targetPath, { recursive: true, force: true });
-      await rename(tmpTarget, action.targetPath);
+      if (action.type === "repair_copy") {
+        await repairSkill(action.sourcePath, action.targetPath, mode);
+      } else {
+        await deploySkill(action.sourcePath, action.targetPath, mode);
+      }
       result.completed.push(action);
     } catch (error) {
       result.failed.push({

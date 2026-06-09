@@ -10,7 +10,7 @@ export async function scanCodexInstructions(
   return scanAgentInstructions("codex", codexRootDir, {
     mainFileName: "AGENTS.md",
     idPrefix: "codex",
-    title: `${codexRootDir}/AGENTS.md`,
+    title: "~/.codex/AGENTS.md",
     description: "Codex 的全局 AGENTS 指令文件。",
     loadBehavior: "作为 Codex 的用户级基础说明，对本机上的 Codex 工作区提供默认行为约束。"
   });

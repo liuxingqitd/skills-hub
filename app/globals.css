@@ -1238,6 +1238,22 @@ textarea {
   gap: 8px;
   flex-shrink: 0;
 }
+.settings-group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  margin-bottom: 16px;
+}
+.settings-group-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.settings-group-desc {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
 
 /* Category cards */
 .category-list {

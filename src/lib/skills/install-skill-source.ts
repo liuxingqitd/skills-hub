@@ -1,10 +1,13 @@
 import { spawn } from "node:child_process";
-import { cp, mkdir, mkdtemp, readdir, rm, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm, stat } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { Readable } from "node:stream";
 import { ReadableStream as NodeReadableStream } from "node:stream/web";
 
+import { deploySkill } from "@/src/lib/sync/link-skill";
+import { SOURCE_SKILLS_DIR } from "@/src/lib/skills/scan-source-skills";
+import type { SyncMode } from "@/src/lib/config/settings-store";
 import type { AgentDefinition } from "@/src/types/agents";
 
 export type SkillInstallSourceKind = "git" | "local";
@@ -335,7 +338,9 @@ export async function discoverInstallableSkills(
 
 export async function installSkillSource(
   rawSource: string,
-  agents: AgentDefinition[]
+  agents: AgentDefinition[],
+  sourceSkillsDir: string = SOURCE_SKILLS_DIR,
+  syncMode: SyncMode = "copy"
 ): Promise<SkillInstallResult> {
   const source = normalizeSource(rawSource);
   if (!source) {
@@ -361,6 +366,30 @@ export async function installSkillSource(
     }
 
     for (const skill of discovered) {
+      // Step A: 先安装到权威数据源
+      const sourceTargetPath = join(sourceSkillsDir, skill.name);
+      let sourceReady = false;
+
+      try {
+        if (await pathExists(sourceTargetPath)) {
+          sourceReady = true;
+        } else {
+          await deploySkill(skill.sourcePath, sourceTargetPath, syncMode);
+          sourceReady = true;
+        }
+      } catch (error) {
+        result.failed.push({
+          skillName: skill.name,
+          agentId: "source",
+          agentName: "Source",
+          targetPath: sourceTargetPath,
+          error: error instanceof Error ? error.message : "Unknown install error"
+        });
+      }
+
+      if (!sourceReady) continue;
+
+      // Step B: 从权威数据源同步到各 agent 目录
       for (const agent of agents) {
         const targetPath = join(agent.skillsPath, skill.name);
         const base = {
@@ -379,8 +408,7 @@ export async function installSkillSource(
             continue;
           }
 
-          await mkdir(agent.skillsPath, { recursive: true });
-          await cp(skill.sourcePath, targetPath, { recursive: true });
+          await deploySkill(sourceTargetPath, targetPath, syncMode);
           result.completed.push(base);
         } catch (error) {
           result.failed.push({

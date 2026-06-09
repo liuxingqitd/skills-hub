@@ -36,7 +36,7 @@ export async function scanSourceSkills(
             name: entry.name,
             description: metadata.data.description || "未提供描述。",
             sourcePath,
-            masterAgentId: "",
+            masterAgentId: "source",
             skillFilePath,
             hasSkillMd: true,
             updatedAt: fileStat.mtime.toISOString(),

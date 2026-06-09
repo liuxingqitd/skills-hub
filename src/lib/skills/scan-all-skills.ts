@@ -6,6 +6,11 @@ import { readSkillFrontmatter } from "@/src/lib/skills/read-skill-frontmatter";
 import type { AgentDefinition } from "@/src/types/agents";
 import type { SkillRecord } from "@/src/types/skills";
 
+// 此函数仅用于 bootstrap 阶段：扫描所有 agent 目录中的 skill，
+// 选出每个 skill 在各 agent 中 SKILL.md mtime 最新的副本，
+// 以便将其回填到权威数据源 (~/.agents/skills/) 中。
+// 正常同步流程不再使用此函数。
+
 type SkillCandidate = {
   agentId: string;
   skillPath: string;

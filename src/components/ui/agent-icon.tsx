@@ -14,6 +14,8 @@ const agentIcons: Record<string, string> = {
   cursor: "/icons/cursor.svg",
   trae: "/icons/trae.svg",
   hermes: "/icons/hermes.svg",
+  codebuddy: "/icons/codebuddy.svg",
+  antigravity: "/icons/antigravity.svg",
 };
 
 const statusLabels: Record<BoardDisplayStatus, string> = {

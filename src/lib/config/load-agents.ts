@@ -1,16 +1,10 @@
 import { homedir } from "node:os";
 
-import agents from "@/config/agents.json";
-import { z } from "zod";
-
+import {
+  readAgentRegistry,
+  readEnabledAgentIds,
+} from "@/src/lib/config/agent-registry-store";
 import type { AgentDefinition } from "@/src/types/agents";
-
-const agentSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1),
-  skillsPath: z.string().min(1),
-  enabled: z.boolean()
-});
 
 function expandPath(p: string): string {
   const home = homedir();
@@ -19,7 +13,6 @@ function expandPath(p: string): string {
     .replace(/^~/, home)
     .replace(/\$HERMES_HOME/g, () => {
       if (process.env.HERMES_HOME) return process.env.HERMES_HOME;
-      // Fallback: on Windows, %LOCALAPPDATA%\hermes; elsewhere, ~/.hermes
       if (process.platform === "win32" && process.env.LOCALAPPDATA) {
         return `${process.env.LOCALAPPDATA}\\hermes`;
       }
@@ -29,9 +22,31 @@ function expandPath(p: string): string {
 }
 
 export async function loadAgents(): Promise<AgentDefinition[]> {
-  return z
-    .array(agentSchema)
-    .parse(agents)
-    .filter((agent) => agent.enabled)
-    .map((agent) => ({ ...agent, skillsPath: expandPath(agent.skillsPath) }));
+  const [registry, enabledIds] = await Promise.all([
+    readAgentRegistry(),
+    readEnabledAgentIds(),
+  ]);
+  const enabledSet = new Set(enabledIds);
+
+  return registry
+    .filter((entry) => enabledSet.has(entry.id))
+    .map((entry) => ({
+      ...entry,
+      enabled: true,
+      skillsPath: expandPath(entry.skillsPath),
+    }));
+}
+
+export async function loadAllRegistryAgents(): Promise<AgentDefinition[]> {
+  const [registry, enabledIds] = await Promise.all([
+    readAgentRegistry(),
+    readEnabledAgentIds(),
+  ]);
+  const enabledSet = new Set(enabledIds);
+
+  return registry.map((entry) => ({
+    ...entry,
+    enabled: enabledSet.has(entry.id),
+    skillsPath: expandPath(entry.skillsPath),
+  }));
 }

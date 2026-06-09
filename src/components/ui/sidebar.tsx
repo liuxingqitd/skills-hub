@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { LayoutGrid, FileStack, Settings } from "lucide-react";
 
 const NAV_ITEMS = [
-  { href: "/" as const, label: "Skill 管理", icon: LayoutGrid },
+  { href: "/" as const, label: "Skill 管理", icon: LayoutGrid, prefetch: false },
   { href: "/instructions" as const, label: "全局规则", icon: FileStack },
 ];
 
@@ -30,6 +30,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={item.prefetch}
               className="sidebar-link"
               data-active={isActive}
               aria-current={isActive ? "page" : undefined}

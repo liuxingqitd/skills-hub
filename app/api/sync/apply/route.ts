@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { applySyncPlan } from "@/src/lib/sync/apply-sync-plan";
 import { buildOverviewModel } from "@/src/lib/server/build-overview-model";
+import { readSettings } from "@/src/lib/config/settings-store";
 import { SOURCE_SKILLS_DIR } from "@/src/lib/skills/scan-source-skills";
 import type { SyncActionType } from "@/src/types/sync";
 
@@ -21,7 +22,7 @@ function filterTypes(raw: unknown): SyncActionType[] {
 
 export async function POST(request: Request) {
   const payload = await request.json().catch(() => ({}));
-  const model = await buildOverviewModel();
+  const [model, settings] = await Promise.all([buildOverviewModel(), readSettings()]);
   const safeTypes = filterTypes(payload?.types);
   const filteredPlan = {
     ...model.syncPlan,
@@ -35,8 +36,9 @@ export async function POST(request: Request) {
     })
   };
   const result = await applySyncPlan(filteredPlan, {
+    syncMode: settings.syncMode,
     pruneOrphans: Boolean(payload?.pruneOrphans),
-    allowedSourceRoots: [SOURCE_SKILLS_DIR, ...model.agents.map((a) => a.skillsPath)]
+    allowedSourceRoots: [SOURCE_SKILLS_DIR]
   });
 
   return NextResponse.json(result);

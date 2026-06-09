@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { loadAgents } from "@/src/lib/config/load-agents";
+import { readSettings } from "@/src/lib/config/settings-store";
 import { installSkillSource } from "@/src/lib/skills/install-skill-source";
 
 const MAX_SOURCE_LENGTH = 2000;
 const RATE_LIMIT_WINDOW_MS = 30_000;
-// single-user local deployment — simple rate limit against accidental double-clicks
 let lastInstallTime = 0;
 
 function isRateLimited(now: number): boolean {
@@ -40,8 +40,8 @@ export async function POST(request: Request) {
   lastInstallTime = Date.now();
 
   try {
-    const agents = await loadAgents();
-    const result = await installSkillSource(source, agents);
+    const [agents, settings] = await Promise.all([loadAgents(), readSettings()]);
+    const result = await installSkillSource(source, agents, undefined, settings.syncMode);
 
     return NextResponse.json(result);
   } catch (error) {

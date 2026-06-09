@@ -29,6 +29,8 @@ function makeAgent(skillsPath: string): AgentDefinition {
     id: "codex",
     name: "Codex",
     skillsPath,
+    description: "",
+    homepage: "",
     enabled: true
   };
 }

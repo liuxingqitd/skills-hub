@@ -51,6 +51,8 @@ describe("scanAgentStates", () => {
       id: "codex",
       name: "Codex",
       skillsPath: agentRoot,
+      description: "",
+      homepage: "",
       enabled: true
     };
 
