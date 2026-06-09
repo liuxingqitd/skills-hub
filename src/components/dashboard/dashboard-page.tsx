@@ -479,6 +479,7 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
           skill={filteredSkill}
           categories={model.categories}
           uiLocked={uiLocked}
+          skillContent={skillContent}
           showCategoryEditor={showCategoryEditor}
           draftCategoryIds={draftCategoryIds}
           isSyncing={isBusy(`sync:${filteredSkill.name}`)}
@@ -665,6 +666,7 @@ function SkillDetailDrawer({
   isSyncing,
   isTagging,
   isSavingCategory,
+  skillContent,
   onClose,
   onToggleCustom,
   onSync,
@@ -682,6 +684,7 @@ function SkillDetailDrawer({
   isSyncing: boolean;
   isTagging: boolean;
   isSavingCategory: boolean;
+  skillContent: string | null;
   onClose: () => void;
   onToggleCustom: () => void;
   onSync: () => void;
@@ -859,7 +862,7 @@ function SkillDetailDrawer({
         </div>
 
         {/* Description */}
-        {skill.skillContent && skill.skillContent !== "未找到 SKILL.md。" && (
+        {skillContent && skillContent !== "未找到 SKILL.md。" && (
           <div className="detail-card">
             <div className="detail-card-label">Skill 内容</div>
             <pre
@@ -875,7 +878,7 @@ function SkillDetailDrawer({
                 fontFamily: "var(--font-mono)",
               }}
             >
-              <code>{skill.skillContent}</code>
+              <code>{skillContent}</code>
             </pre>
           </div>
         )}
