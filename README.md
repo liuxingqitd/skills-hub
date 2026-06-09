@@ -1,6 +1,6 @@
 # Skills Hub
 
-本地 AI agent skills 管理工作台，一站式管理 Claude Code、Codex、Cursor、Trae 四个 AI coding agent 的技能（skills）。
+本地 AI agent skills 管理工作台，一站式管理多个 AI coding agent 的技能（skills）。支持哪些 agent 完全由后台配置，随时增删。
 
 <p align="center">
   <img src="screenshots/dashboard.png" alt="Skills Hub Dashboard" width="800" />
@@ -13,7 +13,7 @@ Skills Hub 扫描你本地各个 agent 安装的 skills，把它们汇聚在一�
 - **一目了然的仪表盘** — 卡片网格或列表视图，看到所有 skill 在每个 agent 上的安装状态
 - **一键同步** — 发现缺失或内容不一致的 skill？一键同步到所有 agent
 - **安装新 skill** — 支持 GitHub 仓库、SSH 地址或本地路径，自动识别 `SKILL.md` 并安装
-- **全局规则编辑器** — 在一个界面里编辑 `~/.claude/CLAUDE.md` 和 `~/.codex/AGENTS.md`，支持实时预览
+- **全局规则编辑器** — 在一个界面里编辑各 agent 的全局规则文件，支持实时预览
 - **分类与标签** — 自动分类 + 手动标记，帮你整理 skills 库
 
 ### 原理
