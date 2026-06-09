@@ -150,9 +150,6 @@
       "certbot",
       "cert",
       "https",
-      "docker",
-      "k8s",
-      "kubernetes",
       "deploy",
       "install"
     ]

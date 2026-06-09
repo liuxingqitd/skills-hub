@@ -14,7 +14,7 @@ npm test             # vitest run (all tests)
 npx tsc --noEmit     # TypeScript type check
 ```
 
-> **重要：** 开发服务器通过 Docker 在 `http://localhost:5175` 运行。不要手动启动 dev server 或修改端口。
+> **重要：** 开发服务器在 `http://localhost:3000` 运行。不要手动修改端口。
 
 ## Project Overview
 

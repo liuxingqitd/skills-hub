@@ -55,14 +55,6 @@
 - **路径穿越保护（规则保存）**：`realpath` 解析后校验父目录位于允许根目录内，拒绝符号链接和非普通文件
 - **写入范围收敛**：规则编辑器只允许更新两个已知主文件，禁止创建新文件
 
-### Docker 部署
-
-项目包含 `Dockerfile` 和 `docker-compose.yml`，支持容器化开发：
-
-- 基础镜像 `node:22-alpine`，源码通过 volume 挂载支持热更新
-- 宿主 home 目录透传，确保 `os.homedir()` 在容器内正确解析
-- 端口映射 `5175:3000`，隔离 `node_modules`
-
 ## 技术栈
 
 | 类别 | 技术 |
@@ -73,7 +65,7 @@
 | Markdown | react-markdown + remark-gfm（GFM 支持）、gray-matter（frontmatter 解析） |
 | 校验 | Zod 4 |
 | 测试 | Vitest 3 + @testing-library/react + jsdom |
-| 部署 | Docker（node:22-alpine）+ docker-compose |
+| 部署 | Node.js 直接运行 |
 
 ## 快速开始
 
@@ -83,13 +75,6 @@
 npm install
 npm run dev
 # → http://localhost:3000
-```
-
-### Docker 部署
-
-```bash
-docker-compose up --build
-# → http://localhost:5175
 ```
 
 ### 常用命令
@@ -178,8 +163,6 @@ skills_hub/
 ├── tests/fixtures/               # 测试夹具（模拟目录树）
 ├── public/                       # 静态资源
 ├── screenshots/                  # README 截图
-├── docker-compose.yml
-├── Dockerfile
 ├── next.config.ts
 ├── tsconfig.json
 ├── vitest.config.ts
