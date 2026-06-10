@@ -47,5 +47,12 @@
     "skillsPath": "$HOME/.antigravity/skills",
     "description": "Google 推出的 AI IDE，面向 Agent-first 时代的智能开发环境",
     "homepage": "https://antigravity.google/"
+  },
+  {
+    "id": "opencode",
+    "name": "OpenCode",
+    "skillsPath": "$HOME/.opencode/skills",
+    "description": "开源终端 AI 编程助手，支持多模型、多供应商的灵活编码体验",
+    "homepage": "https://opencode.ai"
   }
 ]
