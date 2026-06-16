@@ -10,7 +10,7 @@
 
 | Sponsor | |
 |---|---|
-| <a href="https://ofox.ai/x/xingqi"><strong>Ofox AI</strong></a> | 感谢 [Ofox AI](https://ofox.ai/x/xingqi) 赞助本项目！Ofox AI 是可靠的大模型 API 中转与聚合服务商，提供一个 API 接入 OpenAI、Claude、Gemini、DeepSeek、Qwen、Kimi、Doubao、GLM、Mistral 等 100+ 主流模型。 |
+| <a href="https://ofox.ai"><strong>Ofox AI</strong></a> | 感谢 [Ofox AI](https://ofox.ai) 赞助本项目！通过该链接注册并首充，可领取 3 美元赠送额度。Ofox AI 是可靠的大模型 API 中转与聚合服务商，提供一个 API 接入 OpenAI、Claude、Gemini、DeepSeek、Qwen、Kimi、Doubao、GLM、Mistral 等 100+ 主流模型。 |
 
 ## 它能做什么
 
