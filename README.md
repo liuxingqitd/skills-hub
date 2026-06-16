@@ -2,15 +2,15 @@
 
 本地 AI agent skills 管理工作台，一站式管理多个 AI coding agent 的技能（skills）。支持哪些 agent 完全由后台配置，随时增删。
 
+<p align="center">
+  <img src="screenshots/dashboard.png" alt="Skills Hub Dashboard" width="800" />
+</p>
+
 ## ❤️ Sponsor
 
 | Sponsor | |
 |---|---|
 | <a href="https://ofox.ai/x/xingqi"><strong>Ofox AI</strong></a> | 感谢 [Ofox AI](https://ofox.ai/x/xingqi) 赞助本项目！Ofox AI 是可靠的大模型 API 中转与聚合服务商，提供一个 API 接入 OpenAI、Claude、Gemini、DeepSeek、Qwen、Kimi、Doubao、GLM、Mistral 等 100+ 主流模型。 |
-
-<p align="center">
-  <img src="screenshots/dashboard.png" alt="Skills Hub Dashboard" width="800" />
-</p>
 
 ## 它能做什么
 
