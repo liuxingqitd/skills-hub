@@ -1,4 +1,5 @@
 import { homedir } from "node:os";
+import { join } from "node:path";
 
 import {
   readAgentSelection,
@@ -7,11 +8,17 @@ import {
 import { discoverSkillDirs } from "@/src/lib/skills/discover-skill-dirs";
 import type { AgentDefinition } from "@/src/types/agents";
 
+type CodexPathResolverOptions = {
+  platform?: NodeJS.Platform;
+  extraCandidates?: string[];
+};
+
 function expandPath(p: string): string {
   const home = homedir();
   return p
     .replace(/^\$HOME/, home)
     .replace(/^~/, home)
+    .replace(/\$CODEX_HOME/g, () => process.env.CODEX_HOME || join(home, ".codex"))
     .replace(/\$HERMES_HOME/g, () => {
       if (process.env.HERMES_HOME) return process.env.HERMES_HOME;
       if (process.platform === "win32" && process.env.LOCALAPPDATA) {
@@ -27,7 +34,7 @@ export async function loadAgents(): Promise<AgentDefinition[]> {
     readAgentRegistry(),
     readAgentSelection(),
   ]);
-  const agents = registry.map(expandAgentDefinition);
+  const agents = await Promise.all(registry.map(expandAgentDefinition));
   const activeIds = await resolveActiveAgentIds(agents, selection);
 
   return agents
@@ -40,7 +47,7 @@ export async function loadAllRegistryAgents(): Promise<AgentDefinition[]> {
     readAgentRegistry(),
     readAgentSelection(),
   ]);
-  const agents = registry.map(expandAgentDefinition);
+  const agents = await Promise.all(registry.map(expandAgentDefinition));
   const activeIds = await resolveActiveAgentIds(agents, selection);
 
   return agents.map((agent) => ({
@@ -49,12 +56,64 @@ export async function loadAllRegistryAgents(): Promise<AgentDefinition[]> {
   }));
 }
 
-function expandAgentDefinition(entry: Omit<AgentDefinition, "enabled">): AgentDefinition {
+async function expandAgentDefinition(entry: Omit<AgentDefinition, "enabled">): Promise<AgentDefinition> {
+  const expandedSkillsPath = expandPath(entry.skillsPath);
   return {
     ...entry,
     enabled: false,
-    skillsPath: expandPath(entry.skillsPath),
+    skillsPath:
+      entry.id === "codex"
+        ? await resolveCodexSkillsPath(expandedSkillsPath)
+        : expandedSkillsPath,
   };
+}
+
+async function hasSkillDirs(skillsPath: string): Promise<boolean> {
+  return (await discoverSkillDirs(skillsPath)).length > 0;
+}
+
+function windowsCodexSkillsPathCandidates(): string[] {
+  const drives = new Set<string>();
+  const systemDrive = process.env.SystemDrive?.match(/^[A-Za-z]:/i)?.[0].toUpperCase();
+  if (systemDrive) {
+    drives.add(systemDrive);
+  }
+
+  for (let code = "C".charCodeAt(0); code <= "Z".charCodeAt(0); code += 1) {
+    drives.add(`${String.fromCharCode(code)}:`);
+  }
+
+  return [...drives].map((drive) => join(`${drive}\\`, ".codex", "skills"));
+}
+
+export async function resolveCodexSkillsPath(
+  defaultSkillsPath: string,
+  options: CodexPathResolverOptions = {}
+): Promise<string> {
+  if (process.env.CODEX_HOME) {
+    return defaultSkillsPath;
+  }
+
+  if (await hasSkillDirs(defaultSkillsPath)) {
+    return defaultSkillsPath;
+  }
+
+  const platform = options.platform ?? process.platform;
+  const candidates = [
+    ...(options.extraCandidates ?? []),
+    ...(platform === "win32" ? windowsCodexSkillsPathCandidates() : []),
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate === defaultSkillsPath) {
+      continue;
+    }
+    if (await hasSkillDirs(candidate)) {
+      return candidate;
+    }
+  }
+
+  return defaultSkillsPath;
 }
 
 async function hasDetectedSkills(agent: AgentDefinition): Promise<boolean> {

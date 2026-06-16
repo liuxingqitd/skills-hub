@@ -119,6 +119,36 @@
 - 通过：`npm run build`
 - 通过：`git diff --check`
 
+## 2026-06-16 Windows Codex Skill 首次检测排查
+
+### Spec
+
+- 目标：定位 Windows 用户首次打开时 `.codex` 下 skill 没有被检测出来的原因。
+- 范围：Codex agent 的 `skillsPath` 展开、首次 agent 选择逻辑、Windows home / Codex home 环境变量兼容，以及回归测试。
+- 非目标：不恢复插件缓存递归扫描，不改变用户显式启用/禁用 Agent 的语义，不改 UI。
+- 验证标准：Codex 使用自定义 `CODEX_HOME` 时，`skillsPath` 指向该目录下的 `skills`；没有 `CODEX_HOME` 时优先使用 `$HOME/.codex/skills`；Windows 默认路径无 skill 时可 fallback 到盘符根目录 `.codex/skills`。
+
+### Tasks
+
+- [x] 梳理当前 Codex skills 路径来源与 Windows 环境变量差异
+- [x] 设计最小修复并挑战是否存在更优雅方案
+- [x] 增加 Codex home 路径展开回归测试
+- [x] 实现路径展开修复
+- [x] 运行定向测试、全量测试、类型检查和 diff 检查
+- [x] 记录根因与验证结果
+
+### Review
+
+- 根因：Codex 的 skill registry 路径写死为 `$HOME/.codex/skills`，但 Codex 全局规则扫描已经使用 `CODEX_HOME || ~/.codex`。Windows 或自定义 Codex home 环境下，首次扫描会去错目录，因此看不到实际 `.codex` 根目录下的 skills。
+- 结果：Codex registry 改为 `$CODEX_HOME/skills`，路径展开层在没有 `CODEX_HOME` 时回退到 `homedir()/.codex`，保持默认行为不变。
+- 结果：新增 `resolveCodexSkillsPath()`，显式 `CODEX_HOME` 优先；默认路径已有合法 skill 时保持默认；Windows 默认路径无 skill 时，轻量探测 `C:\.codex\skills` 到 `Z:\.codex\skills`，命中后作为 Codex 的最终 `skillsPath`。
+- 结果：新增 `CODEX_HOME`、Windows drive-root fallback、默认路径优先三个回归测试，确保截图里的 `D:\.codex\skills` 类路径能被兼容，同时不误覆盖正常 home 路径。
+- 通过：`npm test -- src/lib/config/load-agents.test.ts`
+- 通过：`npm test`
+- 通过：`npx tsc --noEmit`
+- 通过：`npm run build`
+- 通过：`git diff --check`
+
 # 2026-06-16 Agent Skill 检测范围收窄
 
 ## Spec

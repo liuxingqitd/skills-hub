@@ -9,7 +9,7 @@
   {
     "id": "codex",
     "name": "Codex",
-    "skillsPath": "$HOME/.codex/skills",
+    "skillsPath": "$CODEX_HOME/skills",
     "description": "OpenAI 推出的终端 AI 编程助手，支持 GPT-5 等模型",
     "homepage": "https://github.com/openai/codex"
   },

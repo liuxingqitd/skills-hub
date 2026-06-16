@@ -2,11 +2,12 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   loadAgents,
   loadAllRegistryAgents,
+  resolveCodexSkillsPath,
   resolveActiveAgentIds,
 } from "@/src/lib/config/load-agents";
 import type { AgentDefinition } from "@/src/types/agents";
@@ -42,6 +43,7 @@ describe("loadAgents", () => {
 
   afterEach(async () => {
     await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
+    vi.unstubAllEnvs();
     if (originalAgentsConfig !== undefined) {
       if (originalAgentsConfig === null) {
         await rm(agentsConfigPath, { force: true });
@@ -57,6 +59,43 @@ describe("loadAgents", () => {
 
     expect(agents.length).toBeGreaterThan(0);
     expect(agents.some((agent) => agent.id === "claude")).toBe(true);
+  });
+
+  it("resolves Codex skills from CODEX_HOME when it is configured", async () => {
+    const codexHome = await makeTempRoot("load-agents-codex-home-");
+    vi.stubEnv("CODEX_HOME", codexHome);
+
+    const agents = await loadAllRegistryAgents();
+    const codex = agents.find((agent) => agent.id === "codex");
+
+    expect(codex?.skillsPath).toBe(join(codexHome, "skills"));
+  });
+
+  it("falls back to a detected Windows Codex drive-root skills path", async () => {
+    const defaultSkillsPath = await makeTempRoot("load-agents-default-codex-");
+    const driveRootSkillsPath = await makeTempRoot("load-agents-drive-codex-");
+    await makeSkill(driveRootSkillsPath, "windows-only");
+
+    await expect(
+      resolveCodexSkillsPath(defaultSkillsPath, {
+        platform: "win32",
+        extraCandidates: [driveRootSkillsPath],
+      })
+    ).resolves.toBe(driveRootSkillsPath);
+  });
+
+  it("keeps the default Codex skills path when it already has skills", async () => {
+    const defaultSkillsPath = await makeTempRoot("load-agents-default-codex-");
+    const driveRootSkillsPath = await makeTempRoot("load-agents-drive-codex-");
+    await makeSkill(defaultSkillsPath, "default-skill");
+    await makeSkill(driveRootSkillsPath, "windows-only");
+
+    await expect(
+      resolveCodexSkillsPath(defaultSkillsPath, {
+        platform: "win32",
+        extraCandidates: [driveRootSkillsPath],
+      })
+    ).resolves.toBe(defaultSkillsPath);
   });
 
   it("includes locally detected agents before the user customizes agent selection", async () => {
