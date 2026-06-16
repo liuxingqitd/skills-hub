@@ -28,22 +28,36 @@ export async function readAgentRegistry(): Promise<AgentRegistryEntry[]> {
 }
 
 export async function readEnabledAgentIds(): Promise<string[]> {
+  return (await readAgentSelection()).enabledIds;
+}
+
+export async function readAgentSelection(): Promise<{
+  enabledIds: string[];
+  customized: boolean;
+}> {
   try {
     const raw = await readFile(ENABLED_PATH, "utf-8");
-    const schema = z.object({ enabledIds: z.array(z.string()) });
-    return schema.parse(JSON.parse(raw)).enabledIds;
+    const schema = z.object({
+      enabledIds: z.array(z.string()),
+      customized: z.boolean().optional(),
+    });
+    const parsed = schema.parse(JSON.parse(raw));
+    return {
+      enabledIds: parsed.enabledIds,
+      customized: parsed.customized ?? true,
+    };
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
       console.warn("Failed to read enabled agent ids:", err);
     }
-    return [];
+    return { enabledIds: [], customized: false };
   }
 }
 
 export async function writeEnabledAgentIds(ids: string[]): Promise<void> {
   await writeFile(
     ENABLED_PATH,
-    JSON.stringify({ enabledIds: ids }, null, 2),
+    JSON.stringify({ enabledIds: ids, customized: true }, null, 2),
     "utf-8"
   );
 }

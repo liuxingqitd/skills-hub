@@ -9,7 +9,7 @@
     "cat-devops"
   ],
   "content-risk-detector": [
-    "cat-content"
+    "cat-test"
   ],
   "cover-prompt-generator": [
     "cat-content"
@@ -21,8 +21,7 @@
     "cat-mpxn360v"
   ],
   "humanizer-zh": [
-    "cat-test",
-    "cat-content"
+    "cat-test"
   ],
   "last30days": [
     "cat-search"
@@ -47,5 +46,11 @@
   ],
   "impeccable": [
     "cat-mpxn360v"
+  ],
+  "short-video-opening-optimizer": [
+    "cat-content"
+  ],
+  "video-cut": [
+    "cat-dev-tools"
   ]
 }

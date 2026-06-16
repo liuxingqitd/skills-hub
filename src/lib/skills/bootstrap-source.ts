@@ -1,7 +1,7 @@
-import { mkdir, readdir, stat } from "node:fs/promises";
+import { mkdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 
-import { isReservedSkillEntry } from "@/src/lib/skills/is-reserved-skill-entry";
+import { discoverSkillDirs } from "@/src/lib/skills/discover-skill-dirs";
 import { scanAllSkills } from "@/src/lib/skills/scan-all-skills";
 import { SOURCE_SKILLS_DIR } from "@/src/lib/skills/scan-source-skills";
 import { deploySkill } from "@/src/lib/sync/link-skill";
@@ -10,14 +10,8 @@ import type { AgentDefinition } from "@/src/types/agents";
 import type { SkillRecord } from "@/src/types/skills";
 
 async function collectAgentSkillNames(agent: AgentDefinition): Promise<string[]> {
-  try {
-    const entries = await readdir(agent.skillsPath, { withFileTypes: true });
-    return entries
-      .filter((e) => e.isDirectory() && !isReservedSkillEntry(e.name))
-      .map((e) => e.name);
-  } catch {
-    return [];
-  }
+  const discovered = await discoverSkillDirs(agent.skillsPath);
+  return discovered.map((skill) => skill.name);
 }
 
 export async function bootstrapSourceFromAgents(

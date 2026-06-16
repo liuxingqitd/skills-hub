@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { applySyncPlan } from "@/src/lib/sync/apply-sync-plan";
-import { buildOverviewModel } from "@/src/lib/server/build-overview-model";
+import {
+  buildOverviewModel,
+  invalidateOverviewModelCache,
+} from "@/src/lib/server/build-overview-model";
 import { readSettings } from "@/src/lib/config/settings-store";
 import { SOURCE_SKILLS_DIR } from "@/src/lib/skills/scan-source-skills";
 import type { SyncActionType } from "@/src/types/sync";
@@ -38,8 +41,10 @@ export async function POST(request: Request) {
   const result = await applySyncPlan(filteredPlan, {
     syncMode: settings.syncMode,
     pruneOrphans: Boolean(payload?.pruneOrphans),
-    allowedSourceRoots: [SOURCE_SKILLS_DIR]
+    allowedSourceRoots: [SOURCE_SKILLS_DIR],
+    canonicalSourceRoot: SOURCE_SKILLS_DIR
   });
+  invalidateOverviewModelCache();
 
   return NextResponse.json(result);
 }

@@ -54,30 +54,6 @@
     ]
   },
   {
-    "id": "cat-data",
-    "name": "数据分析",
-    "icon": "📊",
-    "desc": "数据探索、统计分析、可视化",
-    "color": "oklch(55% 0.12 80)",
-    "order": 2,
-    "isPreset": true,
-    "keywords": [
-      "数据",
-      "分析",
-      "统计",
-      "可视化",
-      "chart",
-      "data",
-      "excel",
-      "xlsx",
-      "analyze",
-      "报表",
-      "dashboard",
-      "xlsx",
-      "metric"
-    ]
-  },
-  {
     "id": "cat-dev-tools",
     "name": "开发工具",
     "icon": "🛠",
@@ -152,27 +128,6 @@
       "https",
       "deploy",
       "install"
-    ]
-  },
-  {
-    "id": "cat-code-review",
-    "name": "代码审查",
-    "icon": "🔍",
-    "desc": "代码差异审查、逻辑缺陷检测、安全审计",
-    "color": "oklch(55% 0.15 240)",
-    "order": 6,
-    "isPreset": true,
-    "keywords": [
-      "审查",
-      "审计",
-      "review",
-      "安全",
-      "漏洞",
-      "security",
-      "风险",
-      "defect",
-      "合规",
-      "compliance"
     ]
   },
   {

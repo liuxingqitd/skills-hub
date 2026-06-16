@@ -93,4 +93,24 @@ describe("bootstrapSourceFromAgents", () => {
     await expect(readFile(join(sourceDir, "alpha", "SKILL.md"), "utf8")).resolves.toContain("# alpha");
     await expect(readFile(join(sourceDir, "beta", "SKILL.md"), "utf8")).resolves.toContain("# beta");
   });
+
+  it("ignores skills outside the configured agent skills directory", async () => {
+    const targetRoot = await makeTempRoot("bootstrap-agent-target-");
+    const pluginRoot = await makeTempRoot("bootstrap-agent-plugin-");
+    const sourceDir = await makeTempRoot("bootstrap-source-");
+    await makeSkill(targetRoot, "direct", "# direct skill\n");
+    await makeSkill(pluginRoot, "vendor/package/1.0.0/skills/plugin-only", "# plugin skill\n");
+
+    const agent: AgentDefinition = makeAgent("codex", targetRoot);
+
+    const result = await bootstrapSourceFromAgents([agent], [], sourceDir);
+
+    expect(result).toBe(true);
+    await expect(readFile(join(sourceDir, "direct", "SKILL.md"), "utf8")).resolves.toContain(
+      "# direct skill"
+    );
+    await expect(readFile(join(sourceDir, "plugin-only", "SKILL.md"), "utf8")).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+  });
 });

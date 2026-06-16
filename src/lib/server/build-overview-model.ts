@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { loadAgents } from "@/src/lib/config/load-agents";
 import { scanAgentStates } from "@/src/lib/skills/scan-agent-skills";
 import { scanSourceSkills, SOURCE_SKILLS_DIR } from "@/src/lib/skills/scan-source-skills";
-import { bootstrapSourceFromAgents } from "@/src/lib/skills/bootstrap-source";
+import { scanAllSkills } from "@/src/lib/skills/scan-all-skills";
 import { summarizeStates } from "@/src/lib/skills/classify-install-state";
 import { buildSyncPlan } from "@/src/lib/sync/build-sync-plan";
 import type { AgentDefinition } from "@/src/types/agents";
@@ -22,26 +22,34 @@ export type OverviewModel = {
   syncPlan: ReturnType<typeof buildSyncPlan>;
 };
 
+export function invalidateOverviewModelCache(): void {
+  cachedResult = null;
+}
+
 export async function buildOverviewModel(): Promise<OverviewModel> {
   if (cachedResult && Date.now() - cachedResult.timestamp < CACHE_TTL_MS) {
     return cachedResult.model;
   }
   const agents = await loadAgents();
 
-  // 1. 扫描权威数据源 (~/.agents/skills/)
-  let skills = await scanSourceSkills();
-
-  // 2. 补齐合集：把其他 agent 目录中独有的 skill 收集到 source
-  const bootstrapped = await bootstrapSourceFromAgents(agents, skills);
-  if (bootstrapped) {
-    skills = await scanSourceSkills();
-  }
-
-  // 3. 规范化：所有 skill 的 sourcePath 统一指向权威数据源
-  skills = skills.map((skill) => ({
+  // 1. 扫描显式 canonical source (~/.agents/skills/)。
+  const sourceSkills = (await scanSourceSkills()).map((skill) => ({
     ...skill,
     sourcePath: join(SOURCE_SKILLS_DIR, skill.name),
   }));
+  const inventorySkills = await scanAllSkills(agents);
+
+  // 2. 构建本机 inventory：source 中已有的记录优先，否则保留 Agent 中发现的真实来源。
+  const skillsByName = new Map<string, SkillRecord>();
+  for (const skill of inventorySkills) {
+    skillsByName.set(skill.name, skill);
+  }
+  for (const skill of sourceSkills) {
+    skillsByName.set(skill.name, skill);
+  }
+  const skills = [...skillsByName.values()].sort((left, right) =>
+    left.name.localeCompare(right.name)
+  );
 
   const entries = await Promise.all(
     agents.map(async (agent) => [agent.id, await scanAgentStates(agent, skills)] as const)

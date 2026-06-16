@@ -3,7 +3,8 @@ import { fileURLToPath } from "node:url";
 
 export default defineConfig({
   test: {
-    environment: "node"
+    environment: "node",
+    exclude: ["**/node_modules/**", "**/.git/**", "**/.next/**", "**/.claude/**"]
   },
   resolve: {
     alias: {

@@ -2,5 +2,6 @@
   "enabledIds": [
     "claude",
     "codex"
-  ]
+  ],
+  "customized": true
 }

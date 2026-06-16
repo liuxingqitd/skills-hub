@@ -49,4 +49,20 @@ describe("scanAllSkills", () => {
 
     expect(skills.map((skill) => skill.name)).toEqual(["impeccable", "impeccable-extra"]);
   });
+
+  it("ignores skills outside the configured agent skills directory", async () => {
+    const targetRoot = await makeTempRoot("scan-all-target-");
+    const pluginRoot = await makeTempRoot("scan-all-plugin-");
+    await makeSkill(targetRoot, "direct", "direct");
+    await makeSkill(
+      pluginRoot,
+      "vendor/package/1.0.0/skills/plugin-only",
+      "plugin-only"
+    );
+
+    const skills = await scanAllSkills([makeAgent(targetRoot)]);
+
+    expect(skills.map((skill) => skill.name)).toEqual(["direct"]);
+    expect(skills[0].sourcePath).toContain("direct");
+  });
 });

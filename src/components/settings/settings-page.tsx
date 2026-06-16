@@ -188,7 +188,7 @@ export function SettingsPage() {
   async function loadAgents() {
     setAgentsLoading(true);
     try {
-      const res = await fetch("/api/agents");
+      const res = await fetch("/api/agents", { cache: "no-store" });
       if (res.ok) {
         const data = (await res.json()) as AgentDefinition[];
         setAgents(data);
@@ -202,22 +202,25 @@ export function SettingsPage() {
   }
 
   function toggleAgent(id: string) {
-    setDraftEnabledIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+    const nextEnabledIds = draftEnabledIds.includes(id)
+      ? draftEnabledIds.filter((x) => x !== id)
+      : [...draftEnabledIds, id];
+    setDraftEnabledIds(nextEnabledIds);
+    void saveAgents(nextEnabledIds);
   }
 
-  async function saveAgents() {
+  async function saveAgents(nextEnabledIds = draftEnabledIds) {
     setAgentsSaving(true);
     try {
       const res = await fetch("/api/agents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabledIds: draftEnabledIds }),
+        body: JSON.stringify({ enabledIds: nextEnabledIds }),
       });
       if (!res.ok) throw new Error(`Save failed: ${res.status}`);
       const data = (await res.json()) as AgentDefinition[];
       setAgents(data);
+      setDraftEnabledIds(data.filter((agent) => agent.enabled).map((agent) => agent.id));
       addToast("Agent 配置已保存");
     } catch {
       addToast("保存失败");
@@ -355,10 +358,10 @@ export function SettingsPage() {
                 <div className="panel-actions">
                   <button
                     className="btn btn-primary btn-sm"
-                    onClick={saveAgents}
+                    onClick={() => saveAgents()}
                     disabled={agentsSaving}
                   >
-                    {agentsSaving ? "保存中……" : "保存"}
+                    {agentsSaving ? "保存中……" : "已自动保存"}
                   </button>
                 </div>
               </div>
@@ -446,6 +449,7 @@ export function SettingsPage() {
                               type="checkbox"
                               checked={isEnabled}
                               onChange={() => toggleAgent(agent.id)}
+                              disabled={agentsSaving}
                               style={{ display: "none" }}
                             />
                           </label>

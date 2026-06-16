@@ -1,9 +1,10 @@
 import { homedir } from "node:os";
 
 import {
+  readAgentSelection,
   readAgentRegistry,
-  readEnabledAgentIds,
 } from "@/src/lib/config/agent-registry-store";
+import { discoverSkillDirs } from "@/src/lib/skills/discover-skill-dirs";
 import type { AgentDefinition } from "@/src/types/agents";
 
 function expandPath(p: string): string {
@@ -22,31 +23,62 @@ function expandPath(p: string): string {
 }
 
 export async function loadAgents(): Promise<AgentDefinition[]> {
-  const [registry, enabledIds] = await Promise.all([
+  const [registry, selection] = await Promise.all([
     readAgentRegistry(),
-    readEnabledAgentIds(),
+    readAgentSelection(),
   ]);
-  const enabledSet = new Set(enabledIds);
+  const agents = registry.map(expandAgentDefinition);
+  const activeIds = await resolveActiveAgentIds(agents, selection);
 
-  return registry
-    .filter((entry) => enabledSet.has(entry.id))
-    .map((entry) => ({
-      ...entry,
-      enabled: true,
-      skillsPath: expandPath(entry.skillsPath),
-    }));
+  return agents
+    .filter((agent) => activeIds.has(agent.id))
+    .map((agent) => ({ ...agent, enabled: true }));
 }
 
 export async function loadAllRegistryAgents(): Promise<AgentDefinition[]> {
-  const [registry, enabledIds] = await Promise.all([
+  const [registry, selection] = await Promise.all([
     readAgentRegistry(),
-    readEnabledAgentIds(),
+    readAgentSelection(),
   ]);
-  const enabledSet = new Set(enabledIds);
+  const agents = registry.map(expandAgentDefinition);
+  const activeIds = await resolveActiveAgentIds(agents, selection);
 
-  return registry.map((entry) => ({
-    ...entry,
-    enabled: enabledSet.has(entry.id),
-    skillsPath: expandPath(entry.skillsPath),
+  return agents.map((agent) => ({
+    ...agent,
+    enabled: activeIds.has(agent.id),
   }));
+}
+
+function expandAgentDefinition(entry: Omit<AgentDefinition, "enabled">): AgentDefinition {
+  return {
+    ...entry,
+    enabled: false,
+    skillsPath: expandPath(entry.skillsPath),
+  };
+}
+
+async function hasDetectedSkills(agent: AgentDefinition): Promise<boolean> {
+  const skills = await discoverSkillDirs(agent.skillsPath);
+  return skills.length > 0;
+}
+
+export async function resolveActiveAgentIds(
+  agents: AgentDefinition[],
+  selection: { enabledIds: string[]; customized: boolean }
+): Promise<Set<string>> {
+  const activeIds = new Set(selection.enabledIds);
+  if (selection.customized) {
+    return activeIds;
+  }
+
+  const detected = await Promise.all(
+    agents.map(async (agent) => [agent.id, await hasDetectedSkills(agent)] as const)
+  );
+  for (const [id, hasSkills] of detected) {
+    if (hasSkills) {
+      activeIds.add(id);
+    }
+  }
+
+  return activeIds;
 }

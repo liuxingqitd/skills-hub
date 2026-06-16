@@ -2,7 +2,6 @@ import { buildOverviewModel } from "@/src/lib/server/build-overview-model";
 import { readCustomSkills } from "@/src/lib/config/custom-skills-store";
 import { readCategories } from "@/src/lib/config/categories-store";
 import { readSkillCategories } from "@/src/lib/config/skill-categories-store";
-import { autoCategorize } from "@/src/lib/skills/auto-categorize";
 import type { SkillBoardCell, SkillBoardModel, SkillBoardRow } from "@/src/types/board";
 import type { InstallStatus } from "@/src/types/skills";
 
@@ -38,7 +37,7 @@ export async function buildSkillBoardModel(): Promise<SkillBoardModel> {
 
       const categoryIds = row.name in skillCatMap
         ? skillCatMap[row.name]
-        : autoCategorize(row.name, row.description, categories);
+        : [];
 
       return {
         name: row.name,

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { loadAgents } from "@/src/lib/config/load-agents";
 import { readSettings } from "@/src/lib/config/settings-store";
+import { invalidateOverviewModelCache } from "@/src/lib/server/build-overview-model";
 import { installSkillSource } from "@/src/lib/skills/install-skill-source";
 
 const MAX_SOURCE_LENGTH = 2000;
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
   try {
     const [agents, settings] = await Promise.all([loadAgents(), readSettings()]);
     const result = await installSkillSource(source, agents, undefined, settings.syncMode);
+    invalidateOverviewModelCache();
 
     return NextResponse.json(result);
   } catch (error) {
