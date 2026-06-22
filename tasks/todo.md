@@ -12,8 +12,8 @@
 - [x] 核对当前分支与工作树状态
 - [x] 更新 README 的用户使用路径和开发者命令说明
 - [x] 运行验证命令，证明 README 与项目状态一致
-- [ ] 合并当前客户端分支到 `main`
-- [ ] 合并后复查状态并记录结果
+- [x] 合并当前客户端分支到 `main`
+- [x] 合并后复查状态并记录结果
 
 ## Verify
 
@@ -21,6 +21,16 @@
 - README 不再要求普通用户本地 API、`npm run dev` 或 `npm run build`。
 - `main` 指向已验证的客户端代码。
 - 合并后工作树保持干净或仅保留明确的任务记录变更。
+
+## Review
+
+- 结果：README 已把普通用户路径更新为下载安装桌面客户端，并明确普通用户不需要本地 API、`npm run dev` 或 `npm run build`。
+- 结果：开发者命令保留在本地开发/维护者说明中，避免普通用户误解。
+- 结果：`codex-desktop-client` 已快进合并到 `main`。
+- 通过：`npm test`
+- 通过：`npx tsc --noEmit`
+- 通过：`npm run build:desktop-web`
+- 通过：`git diff --check`
 
 # 2026-06-23 macOS “已损坏，无法打开” 修复
 
