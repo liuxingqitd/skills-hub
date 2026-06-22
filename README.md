@@ -47,6 +47,14 @@ Skills Hub **不做数据库，不做云端存储**。它直接读取你本机�
 
 当前安装包是 unsigned builds。首次打开时，macOS 或 Windows 可能会显示安全提示，这是未签名开源安装包的常见情况。
 
+macOS 如果提示“Skills Hub 已损坏，无法打开”，通常是下载隔离属性拦截了未公证应用。确认你信任该 release 后，可以对安装到 `/Applications` 的应用执行：
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/Skills Hub.app"
+```
+
+然后再次打开应用。维护者构建 macOS 包时会使用 ad-hoc signing，确保 `.app` 自身通过本地代码签名校验；完整免提示分发仍需要 Apple Developer ID 签名与公证。
+
 维护者发布新版本时，推送 `v*` tag 即可触发自动构建：
 
 ```bash

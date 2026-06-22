@@ -1,3 +1,44 @@
+# 2026-06-23 macOS “已损坏，无法打开” 修复
+
+## Spec
+
+- 目标：修复 macOS `.app` 代码签名校验失败导致 Gatekeeper 提示“Skills Hub 已损坏，无法打开”的问题。
+- 根因：Tauri 生成的 macOS bundle 只有 Mach-O linker ad-hoc 签名，`Info.plist` 与资源未被封存，`codesign --verify --deep --strict` 报 `code has no resources but signature indicates they must be present`。
+- 范围：显式配置 macOS ad-hoc signing；补充 README 中未签名/未公证应用的打开说明；用本地 app-only build 证明签名校验通过。
+- 非目标：本轮不申请 Apple Developer ID，不做 notarization，不消除所有 Gatekeeper 首次打开提示。
+- 设计方向：保持 unsigned release 策略不变，但发布的 `.app` 必须先通过本地代码签名完整性校验；用户侧隔离属性问题用明确说明处理。
+
+## Tasks
+
+- [x] 复现并定位本地 `.app` 签名校验失败
+- [x] 在 Tauri macOS bundle 配置中启用显式 ad-hoc signing
+- [x] 更新 README 的 macOS “已损坏”处理说明
+- [x] 重新构建 macOS `.app`
+- [x] 验证 `codesign --verify --deep --strict`
+- [x] 运行基础回归检查
+- [x] 记录 Review / 复盘
+
+## Verify
+
+- `npm run desktop:build:app` 成功。
+- `codesign --verify --deep --strict --verbose=4 "src-tauri/target/release/bundle/macos/Skills Hub.app"` 成功。
+- `spctl --assess` 对未公证 ad-hoc app 仍可能拒绝；完整通过 Gatekeeper 需要 Developer ID 签名和 notarization。
+- README 明确说明 unsigned/not notarized 与 `com.apple.quarantine` 的区别。
+
+## Review
+
+- 根因：未显式配置 macOS signing 时，Tauri 产物只有可执行文件的 linker ad-hoc 签名，bundle 的 `Info.plist` 与资源没有被封存，导致严格 `codesign` 校验失败。
+- 结果：`src-tauri/tauri.conf.json` 的 `bundle.macOS.signingIdentity` 设置为 `"-"`，Tauri build 会对可执行文件和 `.app` bundle 执行 ad-hoc signing。
+- 结果：由于 `v0.1.1` tag 已存在，发布版本继续升到 `0.1.2`，使用新 tag 触发 release workflow。
+- 结果：重新构建后生成 `Contents/_CodeSignature/CodeResources`，`codesign -dv` 显示 `Identifier=com.skillshub.desktop`、`Info.plist entries=15`、`Sealed Resources version=2`。
+- 结果：README 增加 macOS “已损坏，无法打开”说明，区分 app 自身签名完整性与下载隔离属性；用户信任 release 后可移除 `com.apple.quarantine`。
+- 边界：当前机器没有 Developer ID identity，`security find-identity -v -p codesigning` 返回 0 个有效身份；`spctl --assess` 对 ad-hoc/未公证 app 仍返回拒绝/内部评估错误。公开分发要彻底免 Gatekeeper 提示，需要 Apple Developer ID 签名与 notarization。
+- 通过：`npm run desktop:build:app`
+- 通过：`codesign --verify --deep --strict --verbose=4 "src-tauri/target/release/bundle/macos/Skills Hub.app"`
+- 通过：`npm test`
+- 通过：`npx tsc --noEmit`
+- 通过：`git diff --check`
+
 # 2026-06-23 Windows Tauri 图标构建失败
 
 ## Spec
