@@ -5,20 +5,21 @@ import {
   ArrowLeft,
   Edit3,
   ExternalLink,
+  FolderOpen,
   LayoutGrid,
   Monitor,
   Plus,
+  RefreshCw,
   RotateCcw,
   Settings2,
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
 
-import type { AgentDefinition } from "@/src/types/agents";
+import type { AgentDefinition, AgentPathValidation } from "@/src/types/agents";
 import type { Category } from "@/src/types/categories";
 import { useToast } from "@/src/components/ui/toast";
-import { ConfirmDialog } from "@/src/components/ui/modal";
-import { AgentIcon } from "@/src/components/ui/agent-icon";
+import { ConfirmDialog, Modal } from "@/src/components/ui/modal";
 
 /* ---- Presets ---- */
 const PRESET_EMOJIS = [
@@ -67,7 +68,10 @@ export function SettingsPage() {
   const [agents, setAgents] = useState<AgentDefinition[]>([]);
   const [agentsLoading, setAgentsLoading] = useState(false);
   const [agentsSaving, setAgentsSaving] = useState(false);
-  const [draftEnabledIds, setDraftEnabledIds] = useState<string[]>([]);
+  const [pathChecks, setPathChecks] = useState<Record<string, AgentPathValidation>>({});
+  const [checkingPathIds, setCheckingPathIds] = useState<string[]>([]);
+  const [showAddAgentModal, setShowAddAgentModal] = useState(false);
+  const [deletingAgent, setDeletingAgent] = useState<AgentDefinition | null>(null);
 
   const loadCategories = useCallback(async () => {
     setLoading(true);
@@ -192,7 +196,7 @@ export function SettingsPage() {
       if (res.ok) {
         const data = (await res.json()) as AgentDefinition[];
         setAgents(data);
-        setDraftEnabledIds(data.filter((a) => a.enabled).map((a) => a.id));
+        void Promise.all(data.map((agent) => validateAgentPath(agent.id, agent.skillsPath)));
       }
     } catch {
       // ignore
@@ -202,31 +206,120 @@ export function SettingsPage() {
   }
 
   function toggleAgent(id: string) {
-    const nextEnabledIds = draftEnabledIds.includes(id)
-      ? draftEnabledIds.filter((x) => x !== id)
-      : [...draftEnabledIds, id];
-    setDraftEnabledIds(nextEnabledIds);
-    void saveAgents(nextEnabledIds);
+    const nextAgents = agents.map((agent) =>
+      agent.id === id ? { ...agent, enabled: !agent.enabled } : agent
+    );
+    setAgents(nextAgents);
+    void saveAgents(nextAgents);
   }
 
-  async function saveAgents(nextEnabledIds = draftEnabledIds) {
+  async function saveAgents(nextAgents = agents) {
     setAgentsSaving(true);
     try {
       const res = await fetch("/api/agents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabledIds: nextEnabledIds }),
+        body: JSON.stringify({ agents: nextAgents }),
       });
       if (!res.ok) throw new Error(`Save failed: ${res.status}`);
       const data = (await res.json()) as AgentDefinition[];
       setAgents(data);
-      setDraftEnabledIds(data.filter((agent) => agent.enabled).map((agent) => agent.id));
       addToast("Agent 配置已保存");
     } catch {
       addToast("保存失败");
     } finally {
       setAgentsSaving(false);
     }
+  }
+
+  async function validateAgentPath(agentId: string, path: string) {
+    setCheckingPathIds((prev) => (prev.includes(agentId) ? prev : [...prev, agentId]));
+    try {
+      const res = await fetch("/api/agents/validate-path", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path }),
+      });
+      if (!res.ok) throw new Error(`Validate failed: ${res.status}`);
+      const data = (await res.json()) as AgentPathValidation;
+      setPathChecks((prev) => ({ ...prev, [agentId]: data }));
+    } catch {
+      setPathChecks((prev) => ({
+        ...prev,
+        [agentId]: {
+          inputPath: path,
+          resolvedPath: path,
+          status: "missing",
+          skillCount: 0,
+          message: "检测失败",
+        },
+      }));
+    } finally {
+      setCheckingPathIds((prev) => prev.filter((id) => id !== agentId));
+    }
+  }
+
+  function updateAgentPath(id: string, skillsPath: string) {
+    setAgents((prev) =>
+      prev.map((agent) => (agent.id === id ? { ...agent, skillsPath } : agent))
+    );
+  }
+
+  async function saveAgentPath(id: string) {
+    const nextAgents = agents.map((agent) => ({ ...agent }));
+    const agent = nextAgents.find((item) => item.id === id);
+    if (!agent) return;
+    await saveAgents(nextAgents);
+    await validateAgentPath(id, agent.skillsPath);
+  }
+
+  async function chooseAgentPath(id: string) {
+    try {
+      const res = await fetch("/api/system/select-directory", { method: "POST" });
+      if (!res.ok) throw new Error("Directory picker unavailable");
+      const data = (await res.json()) as { path: string };
+      if (!data.path) return;
+      const nextAgents = agents.map((agent) =>
+        agent.id === id ? { ...agent, skillsPath: data.path } : agent
+      );
+      setAgents(nextAgents);
+      await saveAgents(nextAgents);
+      await validateAgentPath(id, data.path);
+    } catch {
+      addToast("无法打开文件夹选择器，请手动输入路径");
+    }
+  }
+
+  async function addCustomAgent(data: { name: string; skillsPath: string }) {
+    const id = createUniqueAgentId(data.name, agents);
+    const nextAgents: AgentDefinition[] = [
+      ...agents,
+      {
+        id,
+        name: data.name,
+        skillsPath: data.skillsPath,
+        description: "自定义 Agent",
+        homepage: "",
+        enabled: true,
+        builtin: false,
+      },
+    ];
+    setAgents(nextAgents);
+    setShowAddAgentModal(false);
+    await saveAgents(nextAgents);
+    await validateAgentPath(id, data.skillsPath);
+  }
+
+  async function deleteCustomAgent(agentId: string) {
+    const agent = agents.find((item) => item.id === agentId);
+    if (agent?.builtin) {
+      addToast("内置 Agent 不能删除，可以选择禁用");
+      return;
+    }
+    const nextAgents = agents.filter((item) => item.id !== agentId);
+    setAgents(nextAgents);
+    setDeletingAgent(null);
+    await saveAgents(nextAgents);
   }
 
   return (
@@ -352,10 +445,16 @@ export function SettingsPage() {
                 <div>
                   <div className="panel-title">Agent 管理</div>
                   <div className="panel-desc">
-                    管理所有 Coding Agent。启用的 Agent 将显示在首页并参与 Skill 同步。禁用后，首页不再展示该 Agent 及其同步状态。
+                    管理所有 Coding Agent。启用的 Agent 将显示在首页并参与 Skill 同步；Skill 文件夹路径以这里选择的目录为准。
                   </div>
                 </div>
                 <div className="panel-actions">
+                  <button
+                    className="btn btn-outline btn-sm"
+                    onClick={() => setShowAddAgentModal(true)}
+                  >
+                    <Plus size={12} /> 新增 Agent
+                  </button>
                   <button
                     className="btn btn-primary btn-sm"
                     onClick={() => saveAgents()}
@@ -377,56 +476,77 @@ export function SettingsPage() {
                   <div className="empty-state-desc">Agent 注册表为空，请检查配置。</div>
                 </div>
               ) : (
-                <div className="category-list">
+                <div className="agent-list">
                   {agents.map((agent) => {
-                    const isEnabled = draftEnabledIds.includes(agent.id);
+                    const pathCheck = pathChecks[agent.id];
+                    const isChecking = checkingPathIds.includes(agent.id);
                     return (
                       <div
                         key={agent.id}
-                        className="category-card"
-                        style={isEnabled ? undefined : { opacity: 0.55 }}
+                        className={"agent-card" + (agent.enabled ? "" : " is-disabled")}
                       >
-                        <img
-                          src={`/icons/${agent.id}.svg`}
-                          alt={agent.id}
-                          width={36}
-                          height={36}
-                          style={{ borderRadius: "var(--radius-sm)", flexShrink: 0 }}
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = "none";
-                          }}
-                        />
-                        <div className="category-info">
-                          <div className="category-name-row">
-                            <span className="category-name">{agent.name}</span>
-                            <span style={{ fontSize: 11, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
-                              {agent.id}
-                            </span>
+                        <AgentLogo agent={agent} />
+                        <div className="agent-main">
+                          <div className="agent-title-row">
+                            <span className="agent-name">{agent.name}</span>
+                            {agent.builtin && <span className="preset-badge">内置</span>}
                           </div>
-                          <div className="category-desc">{agent.description}</div>
-                          <div style={{ marginTop: 4 }}>
-                            <a
-                              href={agent.homepage}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{ fontSize: 11, color: "var(--accent)", display: "inline-flex", alignItems: "center", gap: 4 }}
-                              onClick={(e) => e.stopPropagation()}
+                          <div className="agent-desc">
+                            {agent.description || "自定义 Agent"}
+                            {agent.homepage && (
+                              <a
+                                href={agent.homepage}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <ExternalLink size={10} /> 官网
+                              </a>
+                            )}
+                          </div>
+                          <div className="agent-path-row">
+                            <input
+                              className="agent-path-input"
+                              value={agent.skillsPath}
+                              onChange={(e) => updateAgentPath(agent.id, e.target.value)}
+                              onBlur={() => saveAgentPath(agent.id)}
+                              placeholder="选择 Skill 文件夹路径"
+                            />
+                            <button
+                              className="btn btn-outline btn-sm"
+                              onClick={() => chooseAgentPath(agent.id)}
+                              disabled={agentsSaving}
+                              title="选择文件夹"
                             >
-                              <ExternalLink size={10} /> 官网
-                            </a>
+                              <FolderOpen size={12} /> 选择
+                            </button>
+                            <button
+                              className="btn-icon-sm"
+                              onClick={() => validateAgentPath(agent.id, agent.skillsPath)}
+                              disabled={isChecking}
+                              title="检测路径"
+                            >
+                              <RefreshCw size={14} />
+                            </button>
+                          </div>
+                          <div className={"agent-path-status agent-path-status--" + (pathCheck?.status ?? "empty")}>
+                            {isChecking ? "检测中……" : pathCheck?.message ?? "尚未检测"}
+                            {pathCheck?.resolvedPath && pathCheck.resolvedPath !== agent.skillsPath && (
+                              <span> · {pathCheck.resolvedPath}</span>
+                            )}
                           </div>
                         </div>
-                        <div className="category-actions">
+                        <div className="agent-actions">
                           <label className="toggle-switch" style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
                             <span style={{ fontSize: 12, color: "var(--muted)" }}>
-                              {isEnabled ? "已启用" : "已禁用"}
+                              {agent.enabled ? "已启用" : "已禁用"}
                             </span>
                             <div
                               style={{
                                 width: 36,
                                 height: 20,
                                 borderRadius: 10,
-                                background: isEnabled ? "var(--good)" : "var(--border)",
+                                background: agent.enabled ? "var(--good)" : "var(--border)",
                                 position: "relative",
                                 transition: "background 0.2s",
                               }}
@@ -439,7 +559,7 @@ export function SettingsPage() {
                                   background: "#fff",
                                   position: "absolute",
                                   top: 2,
-                                  left: isEnabled ? 18 : 2,
+                                  left: agent.enabled ? 18 : 2,
                                   transition: "left 0.2s",
                                   boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
                                 }}
@@ -447,12 +567,21 @@ export function SettingsPage() {
                             </div>
                             <input
                               type="checkbox"
-                              checked={isEnabled}
+                              checked={agent.enabled}
                               onChange={() => toggleAgent(agent.id)}
                               disabled={agentsSaving}
                               style={{ display: "none" }}
                             />
                           </label>
+                          {!agent.builtin && (
+                            <button
+                              className="btn-icon-sm"
+                              onClick={() => setDeletingAgent(agent)}
+                              title="删除自定义 Agent"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
@@ -502,6 +631,23 @@ export function SettingsPage() {
         confirmLabel="恢复"
         onConfirm={handleRestoreDefaults}
         onCancel={() => setShowRestoreConfirm(false)}
+      />
+
+      <AgentModal
+        open={showAddAgentModal}
+        agents={agents}
+        onSave={addCustomAgent}
+        onClose={() => setShowAddAgentModal(false)}
+      />
+
+      <ConfirmDialog
+        open={deletingAgent !== null}
+        title={`删除 Agent「${deletingAgent?.name ?? ""}」`}
+        text="确定要删除这个自定义 Agent 吗？已安装在该目录下的 Skill 文件不会被删除。"
+        confirmLabel="删除"
+        danger
+        onConfirm={() => deletingAgent && deleteCustomAgent(deletingAgent.id)}
+        onCancel={() => setDeletingAgent(null)}
       />
     </div>
   );
@@ -635,6 +781,153 @@ function GeneralSettings() {
       </div>
     </div>
   );
+}
+
+/* ============================================================
+   Agent helpers
+   ============================================================ */
+
+function AgentLogo({ agent }: { agent: AgentDefinition }) {
+  const [failed, setFailed] = useState(false);
+  const first = agent.name.trim().charAt(0) || agent.id.charAt(0) || "A";
+  const src = `/icons/${agent.id}.svg`;
+
+  return (
+    <div className="agent-logo" aria-hidden>
+      {!failed ? (
+        <img
+          src={src}
+          alt=""
+          width={28}
+          height={28}
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <span>{first.toUpperCase()}</span>
+      )}
+    </div>
+  );
+}
+
+function AgentModal({
+  open,
+  agents,
+  onSave,
+  onClose,
+}: {
+  open: boolean;
+  agents: AgentDefinition[];
+  onSave: (data: { name: string; skillsPath: string }) => void;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [skillsPath, setSkillsPath] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!open) {
+      setName("");
+      setSkillsPath("");
+      setError("");
+    }
+  }, [open]);
+
+  function handleNameChange(nextName: string) {
+    setName(nextName);
+    setError("");
+  }
+
+  function handleSave() {
+    const trimmedName = name.trim();
+    const trimmedPath = skillsPath.trim();
+    if (!trimmedName) {
+      setError("请输入 Agent 名称");
+      return;
+    }
+    if (!trimmedPath) {
+      setError("请选择或输入 Skill 文件夹路径");
+      return;
+    }
+    onSave({ name: trimmedName, skillsPath: trimmedPath });
+  }
+
+  async function choosePath() {
+    try {
+      const res = await fetch("/api/system/select-directory", { method: "POST" });
+      if (!res.ok) throw new Error("Directory picker unavailable");
+      const data = (await res.json()) as { path: string };
+      if (data.path) {
+        setSkillsPath(data.path);
+        setError("");
+      }
+    } catch {
+      setError("无法打开文件夹选择器，请手动输入路径");
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="新增 Agent"
+      description="添加一个自定义 Agent，并指定它读取 Skill 的文件夹。"
+      footer={
+        <>
+          <button className="btn btn-ghost" onClick={onClose}>取消</button>
+          <button className="btn btn-primary" onClick={handleSave}>添加 Agent</button>
+        </>
+      }
+    >
+      <div className="modal-field">
+        <label>Agent 名称</label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => handleNameChange(e.target.value)}
+          placeholder="例如：My Local Agent"
+          autoFocus
+        />
+      </div>
+      <div className="modal-field">
+        <label>Skill 文件夹路径</label>
+        <div className="agent-path-row">
+          <input
+            className="agent-path-input"
+            type="text"
+            value={skillsPath}
+            onChange={(e) => { setSkillsPath(e.target.value); setError(""); }}
+            placeholder="/Users/me/.my-agent/skills"
+          />
+          <button className="btn btn-outline btn-sm" onClick={choosePath}>
+            <FolderOpen size={12} /> 选择
+          </button>
+        </div>
+      </div>
+      {error && <div style={{ color: "var(--error)", fontSize: 12, marginTop: 8 }}>{error}</div>}
+    </Modal>
+  );
+}
+
+function slugifyAgentId(input: string): string {
+  return input
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function createUniqueAgentId(name: string, agents: AgentDefinition[]): string {
+  const existingIds = new Set(agents.map((agent) => agent.id));
+  const base = slugifyAgentId(name) || "custom-agent";
+  if (!existingIds.has(base)) {
+    return base;
+  }
+
+  let suffix = 2;
+  while (existingIds.has(`${base}-${suffix}`)) {
+    suffix += 1;
+  }
+  return `${base}-${suffix}`;
 }
 
 /* ============================================================

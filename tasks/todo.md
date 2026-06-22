@@ -1,3 +1,54 @@
+# 2026-06-22 自定义 Agent 与 Skill 路径选择
+
+## Spec
+
+- 目标：在 Agent 管理中支持用户编辑内置 Agent 的 Skill 文件夹路径，并新增自定义 Agent。
+- 范围：Agent 配置模型、Agent API、路径检测、系统目录选择入口、设置页 Agent 管理 UI、回归测试。
+- 非目标：不做复杂的跨平台自动推断；不引入 overrides/customAgents 双层配置；不改变 skill 扫描、同步、安装的核心模型。
+- 设计方向：`config/agents.json` 成为完整可编辑 Agent 列表；`config/agent-registry.json` 只作为初始化和恢复默认值模板。路径以用户选择为准。
+
+## Tasks
+
+- [x] 梳理现有 Agent registry、enabledIds、扫描与设置页数据流
+- [x] 制定简化方案并确认文件选择器交互
+- [x] 写入实现计划 `docs/plans/2026-06-22-custom-agent-paths-implementation.md`
+- [x] 实现可编辑 Agent 配置模型并兼容旧格式
+- [x] 新增/调整 Agent 保存、路径检测、目录选择 API
+- [x] 改造 Agent 管理 UI：路径选择、检测、新增自定义 Agent、删除
+- [x] 增加配置/API/UI 回归测试
+- [x] 运行定向测试、全量测试、类型检查、构建和 diff 检查
+- [x] 补充 Review / 复盘
+
+## Verify
+
+- 旧版 `{ enabledIds, customized }` 配置可以无痛读取。
+- 内置 Agent 的路径可被用户修改并持久化。
+- 用户可以点击“选择文件夹”填充路径；失败时仍可手动输入。
+- 自定义 Agent 可新增、启用、禁用、删除。
+- 路径检测能区分可读取目录、路径不存在、非目录、无权限和空目录。
+- 首页、同步、安装继续使用 enabled agents 的 `skillsPath`。
+
+## Review
+
+- 结果：`config/agents.json` 兼容旧版 `{ enabledIds, customized }`，新保存格式为 `{ version: 2, agents: [...] }`，每个 Agent 直接包含 `enabled` 和 `skillsPath`。
+- 结果：`agent-registry.json` 继续作为内置 Agent 模板；旧配置读取时仍显示所有 registry Agent，并按旧 enabledIds 计算启用状态。
+- 结果：新增 `POST /api/agents/validate-path`，返回路径不存在、非目录、无权限、空目录和已发现 Skill 数量。
+- 结果：新增 `POST /api/system/select-directory`，在 macOS/Windows/Linux 尝试打开系统目录选择器；不可用时前端回退到手动输入。
+- 结果：Agent 管理页支持路径输入、选择文件夹、检测路径、新增自定义 Agent、删除自定义 Agent、启用/禁用自动保存。
+- 通过：`npm test -- src/lib/config/agent-registry-store.test.ts src/lib/config/load-agents.test.ts app/api/agents/route.test.ts src/components/settings/settings-page.test.tsx`
+- 通过：`npm test`
+- 通过：`npx tsc --noEmit`
+- 通过：`npm run build`
+- 通过：`git diff --check`
+- 通过：浏览器打开 `http://localhost:3003/settings`，确认 Agent 管理列表、路径检测状态和新增 Agent 弹窗正常渲染。
+
+## Follow-up: 隐藏 Agent ID
+
+- [x] 移除 Agent 列表中的 ID 展示
+- [x] 移除新增 Agent 弹窗中的 Agent ID 输入框
+- [x] 根据 Agent 名称自动生成唯一内部 ID，重名时自动追加数字后缀
+- [x] 增加 UI 回归测试，确认用户无需填写 ID
+
 # 2026-05-14 页面设计优化
 
 ## Spec

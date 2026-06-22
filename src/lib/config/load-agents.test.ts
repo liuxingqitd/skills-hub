@@ -138,4 +138,44 @@ describe("loadAgents", () => {
 
     expect(enabledIds).toEqual(["claude"]);
   });
+
+  it("loads custom agents from editable v2 config", async () => {
+    originalAgentsConfig = await readFile(agentsConfigPath, "utf-8").catch(() => null);
+    const customRoot = await makeTempRoot("load-agents-custom-root-");
+
+    await writeFile(
+      agentsConfigPath,
+      JSON.stringify(
+        {
+          version: 2,
+          agents: [
+            {
+              id: "my-agent",
+              name: "My Agent",
+              skillsPath: customRoot,
+              description: "Custom",
+              homepage: "",
+              enabled: true,
+              builtin: false,
+            },
+          ],
+        },
+        null,
+        2
+      ),
+      "utf-8"
+    );
+
+    const agents = await loadAgents();
+
+    expect(agents).toEqual([
+      expect.objectContaining({
+        id: "my-agent",
+        name: "My Agent",
+        skillsPath: customRoot,
+        enabled: true,
+        builtin: false,
+      }),
+    ]);
+  });
 });

@@ -2,6 +2,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 import {
+  readEditableAgentsConfig,
   readAgentSelection,
   readAgentRegistry,
 } from "@/src/lib/config/agent-registry-store";
@@ -13,11 +14,13 @@ type CodexPathResolverOptions = {
   extraCandidates?: string[];
 };
 
-function expandPath(p: string): string {
+export function expandAgentPath(p: string): string {
   const home = homedir();
   return p
     .replace(/^\$HOME/, home)
     .replace(/^~/, home)
+    .replace(/%USERPROFILE%/gi, process.env.USERPROFILE || home)
+    .replace(/%LOCALAPPDATA%/gi, process.env.LOCALAPPDATA || join(home, "AppData", "Local"))
     .replace(/\$CODEX_HOME/g, () => process.env.CODEX_HOME || join(home, ".codex"))
     .replace(/\$HERMES_HOME/g, () => {
       if (process.env.HERMES_HOME) return process.env.HERMES_HOME;
@@ -30,24 +33,27 @@ function expandPath(p: string): string {
 }
 
 export async function loadAgents(): Promise<AgentDefinition[]> {
-  const [registry, selection] = await Promise.all([
-    readAgentRegistry(),
-    readAgentSelection(),
-  ]);
-  const agents = await Promise.all(registry.map(expandAgentDefinition));
-  const activeIds = await resolveActiveAgentIds(agents, selection);
+  const agents = await loadAllRegistryAgents();
 
   return agents
-    .filter((agent) => activeIds.has(agent.id))
+    .filter((agent) => agent.enabled)
     .map((agent) => ({ ...agent, enabled: true }));
 }
 
 export async function loadAllRegistryAgents(): Promise<AgentDefinition[]> {
-  const [registry, selection] = await Promise.all([
+  const [registry, selection, editableAgents] = await Promise.all([
     readAgentRegistry(),
     readAgentSelection(),
+    readEditableAgentsConfig(),
   ]);
-  const agents = await Promise.all(registry.map(expandAgentDefinition));
+
+  if (editableAgents) {
+    return editableAgents.map(expandAgentDefinition);
+  }
+
+  const agents = registry.map((agent) =>
+    expandAgentDefinition({ ...agent, enabled: false, builtin: true })
+  );
   const activeIds = await resolveActiveAgentIds(agents, selection);
 
   return agents.map((agent) => ({
@@ -56,15 +62,11 @@ export async function loadAllRegistryAgents(): Promise<AgentDefinition[]> {
   }));
 }
 
-async function expandAgentDefinition(entry: Omit<AgentDefinition, "enabled">): Promise<AgentDefinition> {
-  const expandedSkillsPath = expandPath(entry.skillsPath);
+function expandAgentDefinition(entry: AgentDefinition): AgentDefinition {
+  const expandedSkillsPath = expandAgentPath(entry.skillsPath);
   return {
     ...entry,
-    enabled: false,
-    skillsPath:
-      entry.id === "codex"
-        ? await resolveCodexSkillsPath(expandedSkillsPath)
-        : expandedSkillsPath,
+    skillsPath: expandedSkillsPath,
   };
 }
 
