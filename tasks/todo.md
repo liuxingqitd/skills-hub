@@ -1,3 +1,37 @@
+# 2026-06-23 Windows Tauri 图标构建失败
+
+## Spec
+
+- 目标：修复 GitHub Actions Windows 桌面安装包构建中 `icons/icon.ico not found` 导致的 Tauri build 失败。
+- 根因假设：本地 `src-tauri/icons/icon.ico` 已存在、有效且被 `v0.1.0` tag 跟踪；CI 仍报缺失时，需要在 Tauri build 前证明 runner 实际 checkout 的 commit/tag 与资源文件状态。
+- 范围：补充 release workflow 的 Tauri 资源 preflight；清理 Windows resource build 的误导日志；运行本地可执行的验证。
+- 非目标：不在 macOS 本机交叉生成 Windows NSIS/MSI，不处理签名/公证。
+- 设计方向：保持现有 Tauri icon 配置不变，增加 CI 早期检查 `src-tauri/icons/icon.ico`、`.icns`、`.png` 与 `tauri.conf.json`，并输出 commit/ref 和 git 跟踪状态，避免失败延迟到 Rust build script。
+
+## Tasks
+
+- [x] 核对 Tauri 配置、Cargo 配置、workflow 和 icon 文件状态
+- [x] 增加 GitHub Actions 资源 preflight
+- [x] 清理 Windows resource metadata 日志
+- [x] 运行本地验证
+- [x] 记录 Review / 复盘
+
+## Verify
+
+- `src-tauri/icons/icon.ico` 在当前 tag 中被 git 跟踪。
+- release workflow 在 Tauri build 前检查 Windows 必需 icon。
+- Windows resource 日志不再输出误导性的 `package.metadata does not exist`。
+- 本地 `cargo check`、配置解析和 diff 检查通过。
+
+## Review
+
+- 根因判断：当前本地 `v0.1.0` tag 中已经包含 `src-tauri/icons/icon.ico`，且文件格式有效；如果 GitHub Actions 仍报缺失，需要先确认 runner 实际 checkout 的 ref/sha 与资源文件状态。
+- 结果：release workflow 增加 `Verify Tauri bundle resources` 步骤，在 Tauri action 前输出 ref、sha、tracked files，并检查 `.ico`、`.icns`、`.png` 确实存在。
+- 结果：`src-tauri/Cargo.toml` 增加空的 `[package.metadata.tauri-winres]`，避免 Windows resource 构建日志输出误导性的 `package.metadata does not exist`。
+- 通过：`cargo check --manifest-path src-tauri/Cargo.toml`
+- 通过：`ruby -e "require 'yaml'; YAML.load_file('.github/workflows/release.yml'); puts 'yaml ok'"`
+- 通过：`git diff --check`
+
 # 2026-06-22 桌面 Agent 注册表修复
 
 ## Spec

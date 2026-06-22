@@ -5,6 +5,8 @@ description = "Local AI agent skills manager"
 authors = ["Skills Hub Contributors"]
 edition = "2021"
 
+[package.metadata.tauri-winres]
+
 [lib]
 name = "skills_hub_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]

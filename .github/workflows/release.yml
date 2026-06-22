@@ -45,6 +45,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify Tauri bundle resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "ref=${GITHUB_REF}"
+          echo "sha=${GITHUB_SHA}"
+          git rev-parse --short HEAD
+          git ls-files --error-unmatch src-tauri/tauri.conf.json
+          git ls-files --error-unmatch src-tauri/icons/icon.ico
+          git ls-files --error-unmatch src-tauri/icons/icon.icns
+          git ls-files --error-unmatch src-tauri/icons/icon.png
+          test -f src-tauri/icons/icon.ico
+          test -f src-tauri/icons/icon.icns
+          test -f src-tauri/icons/icon.png
+          ls -la src-tauri/icons
+
       - name: Build and upload installers
         uses: tauri-apps/tauri-action@v0.6.2
         env:
