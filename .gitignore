@@ -1,8 +1,11 @@
 node_modules
 .next
+.next-desktop-export
+out
 .DS_Store
 coverage
 dist
+src-tauri/target
 *.log
 tsconfig.tsbuildinfo
 .env

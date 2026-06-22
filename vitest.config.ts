@@ -4,7 +4,13 @@ import { fileURLToPath } from "node:url";
 export default defineConfig({
   test: {
     environment: "node",
-    exclude: ["**/node_modules/**", "**/.git/**", "**/.next/**", "**/.claude/**"]
+    exclude: [
+      "**/node_modules/**",
+      "**/.git/**",
+      "**/.next/**",
+      "**/.next-desktop-export/**",
+      "**/.claude/**"
+    ]
   },
   resolve: {
     alias: {

@@ -38,6 +38,24 @@ Skills Hub **不做数据库，不做云端存储**。它直接读取你本机�
 
 ## 快速开始
 
+### 下载安装包
+
+如果你只是想直接使用桌面版，不需要本地运行 npm 命令，可以到 GitHub Releases 下载安装包：
+
+- macOS：下载 `.dmg`
+- Windows：下载 `.exe` 或 `.msi`
+
+当前安装包是 unsigned builds。首次打开时，macOS 或 Windows 可能会显示安全提示，这是未签名开源安装包的常见情况。
+
+维护者发布新版本时，推送 `v*` tag 即可触发自动构建：
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+### 本地开发
+
 ```bash
 # 安装依赖
 npm install
@@ -53,6 +71,7 @@ npm run dev
 |---|---|
 | `npm run build` | 生产构建 |
 | `npm start` | 启动生产服务器 |
+| `npm run desktop:build` | 构建桌面安装包 |
 | `npm test` | 运行测试 |
 | `npx tsc --noEmit` | TypeScript 类型检查 |
 

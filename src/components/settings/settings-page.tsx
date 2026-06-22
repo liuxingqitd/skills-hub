@@ -20,6 +20,17 @@ import type { AgentDefinition, AgentPathValidation } from "@/src/types/agents";
 import type { Category } from "@/src/types/categories";
 import { useToast } from "@/src/components/ui/toast";
 import { ConfirmDialog, Modal } from "@/src/components/ui/modal";
+import {
+  loadAgentDefinitions,
+  saveAgentDefinitions,
+  validateAgentSkillsPath,
+} from "@/src/lib/config/agents-client";
+import {
+  createCategory,
+  deleteCategory,
+  loadCategories as loadCategoryDefinitions,
+  updateCategory,
+} from "@/src/lib/config/categories-client";
 
 /* ---- Presets ---- */
 const PRESET_EMOJIS = [
@@ -76,10 +87,7 @@ export function SettingsPage() {
   const loadCategories = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/categories");
-      if (res.ok) {
-        setCategories((await res.json()) as Category[]);
-      }
+      setCategories(await loadCategoryDefinitions());
     } catch {
       // ignore
     } finally {
@@ -99,13 +107,7 @@ export function SettingsPage() {
   // ---- CRUD ----
   async function handleAdd(data: { name: string; desc: string; icon: string; color: string }) {
     try {
-      const res = await fetch("/api/categories", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error(`Add failed: ${res.status}`);
-      const created = (await res.json()) as Category;
+      const created = await createCategory(data);
       setCategories((prev) => [...prev, created]);
       setShowAddModal(false);
       addToast(`已添加分类「${data.name}」`);
@@ -116,13 +118,7 @@ export function SettingsPage() {
 
   async function handleEdit(id: string, data: { name: string; desc: string; icon: string; color: string }) {
     try {
-      const res = await fetch("/api/categories", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, ...data }),
-      });
-      if (!res.ok) throw new Error(`Edit failed: ${res.status}`);
-      const updated = (await res.json()) as Category;
+      const updated = await updateCategory(id, data);
       setCategories((prev) => prev.map((c) => (c.id === id ? updated : c)));
       setEditingCat(null);
       addToast(`已更新分类「${data.name}」`);
@@ -133,8 +129,7 @@ export function SettingsPage() {
 
   async function handleDelete(id: string) {
     try {
-      const res = await fetch(`/api/categories?id=${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
+      await deleteCategory(id);
       setCategories((prev) => prev.filter((c) => c.id !== id));
       setDeletingCat(null);
       addToast("已删除分类");
@@ -146,41 +141,17 @@ export function SettingsPage() {
   async function handleRestoreDefaults() {
     setShowRestoreConfirm(false);
     try {
-      // Delete all existing categories — use allSettled so one failure doesn't abort the rest
-      const deleteResults = await Promise.allSettled(
-        categories.map(async (cat) => {
-          const res = await fetch(`/api/categories?id=${cat.id}`, { method: "DELETE" });
-          if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
-          return res;
-        })
-      );
-      const deleteFailed = deleteResults.filter((r) => r.status === "rejected").length;
+      for (const cat of categories) {
+        await deleteCategory(cat.id);
+      }
 
-      // Create preset categories — likewise use allSettled for resilience
-      const createResults = await Promise.allSettled(
-        DEFAULT_PRESETS.map(async (preset) => {
-          const res = await fetch("/api/categories", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(preset),
-          });
-          if (!res.ok) throw new Error(`Create failed: ${res.status}`);
-          return res;
-        })
-      );
-      const createFailed = createResults.filter((r) => r.status === "rejected").length;
+      for (const preset of DEFAULT_PRESETS) {
+        await createCategory(preset);
+      }
 
       // Always resync UI state with server state to recover consistency
       await loadCategories();
-
-      if (deleteFailed === 0 && createFailed === 0) {
-        addToast("已恢复预设分类");
-      } else {
-        const parts: string[] = [];
-        if (deleteFailed > 0) parts.push(`${deleteFailed} 个分类删除失败`);
-        if (createFailed > 0) parts.push(`${createFailed} 个分类创建失败`);
-        addToast(`恢复部分完成：${parts.join("，")}，已重新同步状态`);
-      }
+      addToast("已恢复预设分类");
     } catch {
       // Recovery: resync UI state with server on any unexpected failure
       try { await loadCategories(); } catch { /* ignore */ }
@@ -192,12 +163,9 @@ export function SettingsPage() {
   async function loadAgents() {
     setAgentsLoading(true);
     try {
-      const res = await fetch("/api/agents", { cache: "no-store" });
-      if (res.ok) {
-        const data = (await res.json()) as AgentDefinition[];
-        setAgents(data);
-        void Promise.all(data.map((agent) => validateAgentPath(agent.id, agent.skillsPath)));
-      }
+      const data = await loadAgentDefinitions();
+      setAgents(data);
+      void Promise.all(data.map((agent) => validateAgentPath(agent.id, agent.skillsPath)));
     } catch {
       // ignore
     } finally {
@@ -216,13 +184,7 @@ export function SettingsPage() {
   async function saveAgents(nextAgents = agents) {
     setAgentsSaving(true);
     try {
-      const res = await fetch("/api/agents", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agents: nextAgents }),
-      });
-      if (!res.ok) throw new Error(`Save failed: ${res.status}`);
-      const data = (await res.json()) as AgentDefinition[];
+      const data = await saveAgentDefinitions(nextAgents);
       setAgents(data);
       addToast("Agent 配置已保存");
     } catch {
@@ -235,13 +197,7 @@ export function SettingsPage() {
   async function validateAgentPath(agentId: string, path: string) {
     setCheckingPathIds((prev) => (prev.includes(agentId) ? prev : [...prev, agentId]));
     try {
-      const res = await fetch("/api/agents/validate-path", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path }),
-      });
-      if (!res.ok) throw new Error(`Validate failed: ${res.status}`);
-      const data = (await res.json()) as AgentPathValidation;
+      const data = await validateAgentSkillsPath(path);
       setPathChecks((prev) => ({ ...prev, [agentId]: data }));
     } catch {
       setPathChecks((prev) => ({

@@ -1,3 +1,336 @@
+# 2026-06-22 桌面 Agent 注册表修复
+
+## Spec
+
+- 目标：修复桌面静态包中 Agent 管理显示“暂无 Agent / Agent 注册表为空”的问题。
+- 根因：桌面静态导出排除了 `app/api`，设置页仍在客户端请求 `/api/agents`，请求失败后保留空数组。
+- 范围：补齐桌面运行时 Agent 读取/保存桥；Web 模式继续使用现有 API route；增加回归测试和验证。
+- 非目标：本轮不迁移同步、安装、路径选择器等其他 API。
+- 设计方向：复用已有 `tauri-runtime` 判定模式，新增 `agents-client`。Web 下调用 `/api/agents`，Tauri 下调用 Rust commands 读取 registry/selection 并保存 Agent 配置。
+
+## Tasks
+
+- [x] 定位空状态来源与根因
+- [x] 梳理现有 Agent API 与配置读写边界
+- [x] 实现桌面 Agent client bridge 与 Rust commands
+- [x] 改造设置页使用 bridge，保留 Web fallback
+- [x] 增加回归测试
+- [x] 运行定向测试、类型检查、构建和 Rust 检查
+- [x] 记录 Review / 复盘
+
+## Verify
+
+- 桌面/Tauri 模式不再依赖 `/api/agents` 获取内置 Agent。
+- Web 模式仍请求现有 `/api/agents` route。
+- 旧版 `{ enabledIds, customized }` 配置仍能读出内置 registry。
+- 保存 Agent 配置后返回最新 Agent 列表。
+
+## Review
+
+- 根因：桌面静态导出移除了 `/api/agents`，设置页客户端请求失败后没有可用 fallback，导致 Agent 列表为空。
+- 结果：新增 `src/lib/config/agents-client.ts`，Web 模式继续调用 `/api/agents` 和 `/api/agents/validate-path`，Tauri 模式改用 commands。
+- 结果：新增 `src-tauri/src/agents.rs`，提供 `get_agents`、`save_agents_config` 和 `validate_agent_path`，内置 registry 在桌面端不再依赖 Next API。
+- 结果：`SettingsPage` 通过 client bridge 读写 Agent，内置 Agent 在桌面静态包中可恢复显示。
+- 通过：`npm test -- src/lib/config/agents-client.test.ts src/components/settings/settings-page.test.tsx src/lib/config/load-agents.test.ts app/api/agents/route.test.ts`
+- 通过：`npm test`
+- 通过：`npx tsc --noEmit`
+- 通过：`npm run build`
+- 通过：`npm run build:desktop-web`
+- 通过：`cargo check --manifest-path src-tauri/Cargo.toml`
+- 通过：`cargo fmt --manifest-path src-tauri/Cargo.toml --check`
+- 通过：`git diff --check`
+
+# 2026-06-23 GitHub Release 安装包发布
+
+## Spec
+
+- 目标：通过 GitHub Releases 自动发布 unsigned macOS / Windows 桌面安装包，让用户不需要运行 npm 命令即可安装。
+- 范围：新增 GitHub Actions release workflow、README 发布说明、实施计划文档。
+- 非目标：不做 macOS Developer ID 签名/公证，不做 Windows Authenticode 签名，不引入自动更新。
+- 触发方式：推送 `v*` tag 自动发布；同时支持 `workflow_dispatch` 手动输入 tag。
+- 设计方向：使用 `tauri-apps/tauri-action@v1` 在 `macos-latest` 生成 `.dmg`，在 `windows-latest` 生成 NSIS `.exe` 和 `.msi`，上传到同一个 GitHub Release。
+
+## Tasks
+
+- [x] 写入实现计划 `docs/plans/2026-06-23-github-release-installers.md`
+- [x] 新增 GitHub Release workflow
+- [x] 在 README 说明安装包下载、未签名提示和 tag 发布方式
+- [x] 运行测试、类型检查、桌面静态构建和 diff 检查
+- [x] 记录 Review / 复盘
+
+## Verify
+
+- tag `v*` 会触发 release workflow。
+- 手动触发 workflow 时必须输入 release tag。
+- macOS job 构建并上传 `.dmg`。
+- Windows job 构建并上传 NSIS `.exe` 和 `.msi`。
+- Release body 明确说明当前安装包未签名。
+
+## Review
+
+- 结果：新增 `.github/workflows/release.yml`，推送 `v*` tag 或手动输入 tag 时会运行 macOS / Windows 矩阵构建，并通过 `tauri-apps/tauri-action@v1` 创建或更新 GitHub Release。
+- 结果：macOS job 使用 `--bundles dmg`，Windows job 使用 `--bundles nsis,msi`；Release asset 命名包含版本、平台、架构和 bundle 类型。
+- 结果：Release body 明确说明安装包未签名，README 也补充了下载入口、未签名提示和维护者 tag 发布命令。
+- 边界：本地未生成 Windows 安装包；该部分由 GitHub `windows-latest` runner 验证。macOS/Windows 完整安装器产物需要在首次 push tag 后由 Actions 实际产出。
+- 通过：`npm test`
+- 通过：`npx tsc --noEmit`
+- 通过：`npm run build:desktop-web`
+- 通过：`ruby -e "require 'yaml'; YAML.load_file('.github/workflows/release.yml'); puts 'yaml ok'"`
+- 通过：`git diff --check`
+
+# 2026-06-22 桌面首页数据迁移
+
+## Spec
+
+- 目标：桌面生产包首页不再显示构建期空模型，Agent、Skill、分类标签和同步状态要与 Web 版读取同一批本地文件。
+- 根因：`app/page.tsx` 在 `SKILLS_HUB_DESKTOP=1` 时返回空 `SkillBoardModel`，桌面首页没有运行时数据加载。
+- 范围：新增桌面 Skill Board 读取 command、前端 board client、首页运行时加载状态和回归测试。
+- 非目标：本切片先不迁移同步/安装/删除/分类保存等写操作按钮。
+- 设计方向：静态导出仍输出一个可启动壳层；Tauri 运行时挂载后调用本地 Rust `get_skill_board_model` 扫描 `~/.agents/skills`、各 Agent skills 目录、分类配置和自研标记。
+
+## Tasks
+
+- [x] 定位首页 Skill=0 与分类标签缺失根因
+- [x] 实现 Rust Skill Board 扫描模型
+- [x] 新增前端 Skill Board client bridge
+- [x] 改造首页/仪表盘在 Tauri 运行时加载本地模型
+- [x] 增加回归测试
+- [x] 运行测试、类型检查、Web/桌面构建和 Rust 检查
+- [x] 记录 Review / 复盘
+
+## Verify
+
+- 桌面静态包首页不再依赖构建期空模型作为最终数据。
+- Tauri 运行时能显示本机 Agent、Skill 和分类标签。
+- Web 模式仍使用 server component 模型，不破坏 `npm run dev`。
+- `npm run build:desktop-web` 仍能静态导出。
+
+## Review
+
+- 根因：桌面静态构建为了避开 Next API routes，把首页模型固定成空数组；Tauri 运行时没有再加载真实本机数据。
+- 结果：新增 `get_skill_board_model` Tauri command，运行时扫描启用 Agent、`~/.agents/skills`、Agent skills 目录、分类配置、自研标记和 skill 分类映射。
+- 结果：新增 `src/lib/board/skill-board-client.ts`，Web 模式返回 `null` 保持 server component 模型，Tauri 模式通过 `invoke` 获取本地模型。
+- 结果：`DashboardPage` 挂载后在 Tauri 中用本地模型替换构建期空壳，Skill 数量、Agent 数、分类标签、自研/开源标签和状态恢复显示。
+- 结果：桌面静态导出目录 `out/` 仍无 `/api/*` 输出；普通 Web 构建仍保留 API routes，这是 Web 运行模式需要的。
+- 剩余：同步、安装、删除、自研标记切换、分类保存、Skill 内容详情等写/详情操作仍需继续迁移到 Tauri commands，才能宣称桌面生产功能与 Web 完全一致且全程不依赖 Next API。
+- 通过：`npm test -- src/lib/board/skill-board-client.test.ts src/lib/config/agents-client.test.ts`
+- 通过：`npm test`
+- 通过：`npx tsc --noEmit`
+- 通过：`npm run build`
+- 通过：`npm run build:desktop-web`
+- 通过：`cargo check --manifest-path src-tauri/Cargo.toml`
+- 通过：`cargo fmt --manifest-path src-tauri/Cargo.toml --check`
+- 通过：`find out -path '*/api/*' -print` 无输出
+- 通过：`git diff --check`
+
+# 2026-06-22 桌面 Dashboard 操作迁移
+
+## Spec
+
+- 目标：Dashboard 在 Tauri 桌面生产运行时不再调用 Next `/api/*`，同步、安装、删除、自研标记、分类保存和 Skill 内容详情都走本地 commands。
+- 范围：Dashboard action client、Rust commands、同步/安装/删除/配置写入/详情读取、本地与 GitHub 安装、回归测试。
+- 非目标：本切片不迁移 Settings 分类管理、通用设置页、系统目录选择器和 Sync 专页。
+- 设计方向：前端 Dashboard 只调用 `dashboard-actions-client`；Web 模式保留原 API fallback，Tauri 模式调用 Rust commands。Rust 侧复刻当前 Web 行为，使用本地文件系统作为数据源。
+
+## Tasks
+
+- [x] 梳理 Dashboard 现存 `/api/*` 触点
+- [x] 新增 Rust Dashboard 操作 commands
+- [x] 新增 Dashboard action client bridge
+- [x] 替换 Dashboard 组件里的直接 API fetch
+- [x] 增加 action client 回归测试
+- [x] 运行定向测试、全量测试、类型检查、Web/桌面构建和 Rust 检查
+- [x] 记录 Review / 复盘
+
+## Verify
+
+- Tauri 运行时 Dashboard 组件不直接请求 `/api/*`。
+- Web 模式仍能通过原 API fallback 使用相同组件。
+- 桌面静态导出目录不包含 `/api/*`。
+- 同步/安装/删除等文件操作不依赖 Next 后端。
+
+## Review
+
+- 结果：新增 `src/lib/board/dashboard-actions-client.ts`，统一封装 sync、install、remove、custom tag、skill categories 和 skill content。
+- 结果：Tauri 模式调用 `apply_sync_actions`、`install_skill_source_command`、`remove_skill`、`set_custom_skill`、`set_skill_categories_command`、`get_skill_content`；Web 模式继续 fallback 到原 `/api/*`。
+- 结果：`DashboardPage` 移除直接 API fetch，所有 Dashboard 操作都经过 bridge。
+- 结果：Rust 侧实现递归复制、修复替换、symlink 创建、symlink 安全删除、配置 JSON 写入、Skill 内容读取、Skill 删除、本地目录安装和 GitHub archive 安装。
+- 结果：GitHub 安装在桌面端使用系统 `curl` 和 `tar`，不启动 Next API 服务；若系统缺少命令会返回明确错误。
+- 剩余：Settings 分类管理、通用设置、系统目录选择器、Sync 专页如果要在桌面生产中完整可用，仍应迁到 Tauri commands。
+- 通过：`npm test -- src/lib/board/dashboard-actions-client.test.ts src/lib/board/skill-board-client.test.ts src/lib/config/agents-client.test.ts`
+- 通过：`npm test`
+- 通过：`npx tsc --noEmit`
+- 通过：`npm run build`
+- 通过：`npm run build:desktop-web`
+- 通过：`cargo check --manifest-path src-tauri/Cargo.toml`
+- 通过：`cargo fmt --manifest-path src-tauri/Cargo.toml --check`
+- 通过：`find out -path '*/api/*' -print` 无输出
+- 通过：`git diff --check`
+
+# 2026-06-22 桌面客户端长期方案
+
+## Spec
+
+- 目标：启动 macOS / Windows 长期桌面客户端迁移，采用 Tauri 2 + Rust 本地核心 + 静态 React 前端。
+- 范围：新增桌面客户端实现计划、Tauri 2 项目骨架、桌面构建脚本、Next 静态导出切换，以及首轮验证。
+- 非目标：本轮不迁移全部 API route，不重写 skill/sync/instructions 核心逻辑，不引入 Electron 或 Node sidecar 作为长期依赖。
+- 设计方向：先建立可维护的桌面外壳，让现有 Web 开发模式保持不变；桌面生产构建使用静态前端，后续逐步把文件系统能力迁入 Rust commands。
+
+## Tasks
+
+- [x] 确认长期技术路线：Tauri 2 + Rust core + React static UI
+- [x] 创建客户端开发分支 `codex-desktop-client`
+- [x] 写入实现计划 `docs/plans/2026-06-22-desktop-client-implementation.md`
+- [x] 新增 Tauri 2 桌面项目骨架
+- [x] 增加桌面构建脚本与静态导出配置
+- [x] 运行格式、类型、测试和构建验证
+- [x] 记录 Review / 复盘
+
+## Verify
+
+- 普通 Web 开发仍然使用 `npm run dev` 和 `http://localhost:3000`。
+- 桌面开发有独立命令，不改变现有服务端页面开发路径。
+- 桌面生产构建可以切到 Next static export，为后续 Tauri `frontendDist` 提供 `out/`。
+- Tauri 配置明确面向 macOS / Windows 分发，不依赖临时 Node sidecar。
+- 当前改动不破坏现有测试、类型检查和 Next 构建。
+
+## Review
+
+- 结果：新增 `src-tauri/` Tauri 2 Rust 工程，包含 `Cargo.toml`、`tauri.conf.json`、默认 capability、入口文件和最小应用图标。
+- 结果：Tauri dev mode 指向 `http://localhost:3000`，保持现有 `npm run dev` Web 开发体验不变。
+- 结果：新增 `@tauri-apps/api` 与 `@tauri-apps/cli`，并增加 `tauri`、`desktop:dev`、`desktop:build`、`build:desktop-web` 脚本。
+- 结果：`build:desktop-web` 通过 Node 脚本设置 `SKILLS_HUB_DESKTOP=1`，避免 Windows 不支持 POSIX 环境变量写法。
+- 结果：`next.config.ts` 只在桌面构建时启用 `output: "export"` 和 `images.unoptimized`。
+- 已知阻塞：`npm run build:desktop-web` 当前失败在 `/api/instructions`、`/api/custom-tag` 等 App Router API routes；这是预期迁移点，后续需要把 `/api/*` 文件系统能力迁到 Tauri commands 或桌面桥接层。
+- 通过：`npm test`
+- 通过：`npx tsc --noEmit`
+- 通过：`npm run build`
+- 通过：`cargo check --manifest-path src-tauri/Cargo.toml`
+- 通过：`git diff --check`
+
+## Follow-up: 桌面打包可用性收口
+
+### Spec
+
+- 目标：让桌面打包命令区分“应用本体可生成”和“安装器镜像可生成”，并消除 macOS bundle identifier 警告。
+- 范围：Tauri identifier、npm 打包脚本、macOS `.app` 产物验证、DMG/Windows 打包状态记录。
+- 非目标：本切片不继续迁移 Dashboard/Settings/Sync 的运行时 API，不处理签名/公证，不在 macOS 本机强行交叉生成 Windows 安装包。
+- 设计方向：保留 `desktop:build` 作为完整构建命令，同时增加更细的 `desktop:build:app`、`desktop:build:dmg`、`desktop:build:windows`，让 CI 和本地排障能明确失败发生在应用构建还是安装包封装。
+
+### Tasks
+
+- [x] 写入实现计划 `docs/plans/2026-06-22-desktop-packaging-readiness.md`
+- [x] 修正 Tauri bundle identifier
+- [x] 增加细分桌面打包脚本
+- [x] 验证 macOS `.app` 构建
+- [x] 记录 DMG 与 Windows 打包边界
+- [x] 运行测试、类型检查、桌面静态构建和 diff 检查
+
+### Verify
+
+- `npm run desktop:build:app` 在 macOS 生成 `Skills Hub.app`。
+- `npm run desktop:build:dmg` 与 `.app` 构建解耦，能单独暴露 `hdiutil` 问题。
+- Windows 安装包命令存在，但明确要求 Windows 或 Windows CI 环境运行。
+- 常规测试、类型检查和桌面静态导出仍通过。
+
+### Review
+
+- 结果：Tauri identifier 从 `com.skillshub.app` 改为 `com.skillshub.desktop`，`npx tauri build --bundles app` 不再出现 macOS `.app` 后缀警告。
+- 结果：新增 `desktop:build:app`、`desktop:build:dmg`、`desktop:build:windows`，分别用于 macOS app bundle、macOS DMG 和 Windows NSIS/MSI installer 验证。
+- 结果：`npm run desktop:build:app` 成功生成 `/Users/liuxingqi/ai_lab/skills_hub/src-tauri/target/release/bundle/macos/Skills Hub.app`。
+- 已知边界：`npm run desktop:build:dmg` 当前仍失败在 macOS `hdiutil: create failed - 设备未配置`，应用本体已生成，失败点是本机 DMG 镜像封装环境。
+- 已知边界：`desktop:build:windows` 需要 Windows 机器或配置了 Windows target 的 CI runner；本机 macOS 不作为 Windows installer 生成环境。
+- 通过：`npm test`
+- 通过：`npx tsc --noEmit`
+- 通过：`npm run build:desktop-web`
+- 通过：`npm run desktop:build:app`
+- 通过：`git diff --check`
+
+## Follow-up: Instructions Tauri Bridge
+
+### Spec
+
+- 目标：把 `/instructions` 页面作为第一条桌面本地能力迁移切片，桌面运行时通过 Tauri commands 读取和保存全局规则文件。
+- 范围：Rust instructions commands、前端 instructions 数据访问桥、规则编辑器调用点、定向测试和构建验证。
+- 非目标：本切片不迁移 Dashboard 同步/安装，不迁移 Settings Agent 管理，不移除现有 Web `/api/instructions*` route handlers。
+- 设计方向：保持 Web 路径继续 fetch `/api/instructions*`；当运行在 Tauri WebView 中时，前端使用 `@tauri-apps/api/core.invoke` 调用 Rust commands。Rust 侧复刻当前安全边界：只扫描 Claude/Codex/Hermes 主规则文件，只允许保存这些主文件，并检查 previousHash。
+
+### Tasks
+
+- [x] 梳理 instructions 模型与保存安全边界
+- [x] 新增 Rust instructions 模型扫描与保存 commands
+- [x] 注册 Tauri command handler
+- [x] 新增前端 instructions client bridge
+- [x] 改造 `EditorPage` 使用 bridge，保留 Web API fallback
+- [x] 增加桥接层单元测试
+- [x] 运行定向测试、全量测试、类型检查、Web 构建、桌面静态构建、Cargo 检查和 diff 检查
+- [x] 记录 Review / 复盘
+
+### Verify
+
+- Web 模式仍请求 `/api/instructions` 和 `/api/instructions/update`。
+- Tauri 模式调用 `get_instructions_model` 和 `update_instruction_asset`。
+- 保存时 stale hash 返回明确错误，不覆盖已变化文件。
+- `npm run build:desktop-web` 仍通过。
+- `cargo check --manifest-path src-tauri/Cargo.toml` 通过。
+
+### Review
+
+- 结果：新增 `src-tauri/src/instructions.rs`，提供 `get_instructions_model` 和 `update_instruction_asset` commands，扫描 Claude/Codex/Hermes 主规则文件，并复刻现有 hash 归一化、stale 检查和主文件写入边界。
+- 结果：`src-tauri/src/lib.rs` 注册 instructions commands；`src-tauri/Cargo.toml` 增加 `serde` 与 `sha2`。
+- 结果：新增 `src/lib/desktop/tauri-runtime.ts` 和 `src/lib/instructions/instructions-client.ts`，Tauri WebView 中使用 `invoke`，普通 Web 中继续调用 `/api/instructions*`。
+- 结果：`EditorPage` 不再直接 fetch instructions API，而是通过 client bridge 读写；现有 Web route handlers 保留，便于渐进迁移。
+- 结果：新增 `instructions-client.test.ts`，覆盖 Web fallback、Tauri invoke 和 command error 归一化；Rust 单元测试覆盖 BOM/CRLF hash 归一化。
+- 结果：`vitest.config.ts` 排除 `.next-desktop-export`，避免桌面 shadow app 存在时 Vitest 扫到重复测试。
+- 通过：`npm test -- src/lib/instructions/instructions-client.test.ts`
+- 通过：`cargo test --manifest-path src-tauri/Cargo.toml`
+- 通过：`npm test`
+- 通过：`npx tsc --noEmit`
+- 通过：`npm run build`
+- 通过：`npm run build:desktop-web`
+- 通过：`find out -path '*/api/*' -print` 无输出
+- 通过：`git diff --check`
+
+## Follow-up: 桌面静态导出切片
+
+### Spec
+
+- 目标：让 `npm run build:desktop-web` 先稳定产出 Tauri 可消费的 `out/` 静态前端包。
+- 范围：桌面构建脚本、桌面构建期首页模型、静态导出验证记录。
+- 非目标：本切片不迁移全部 `/api/*` 到 Rust commands，不承诺桌面生产包里的同步/安装/设置写入功能已经可用。
+- 设计方向：Web 仍使用 Next server/API routes；桌面静态构建使用临时 shadow app 排除 `app/api`，首页渲染无本机数据的静态壳层，为下一步 Tauri command bridge 留出清晰边界。
+
+### Tasks
+
+- [x] 确认 `build:desktop-web` 真实阻塞点
+- [x] 将首页 `force-dynamic` 改为 Web 请求期动态、桌面构建期静态
+- [x] 将桌面构建脚本改为 shadow app 构建并排除 `app/api`
+- [x] 运行桌面静态构建、常规 Web 构建、类型检查和测试
+- [x] 记录 Review / 复盘
+
+### Verify
+
+- `npm run build:desktop-web` 生成根目录 `out/`。
+- `out/index.html` 存在，并且不包含 Next API route 输出。
+- `npm run build` 仍保持 Web server 构建路径。
+- `npm test` 和 `npx tsc --noEmit` 通过。
+
+### Review
+
+- 根因：Next static export 会收集 `app/api/**/route.ts`，当前 `/api/custom-tag`、`/api/instructions` 等 route handlers 依赖运行时文件系统和动态请求语义，不能直接参与静态导出。
+- 结果：`scripts/build-desktop-web.mjs` 改为在 `.next-desktop-export` 创建临时 shadow app，复制页面代码但排除 `app/api`，构建完成后把静态产物复制回根目录 `out/`。
+- 结果：`app/page.tsx` 移除全局 `force-dynamic`，Web 请求期使用 `connection()` 保持动态 server render；桌面构建期返回空 `SkillBoardModel`，避免构建时把本机 skill 状态固化进静态包。
+- 结果：`.gitignore` 忽略 `.next-desktop-export` 和 `out`，避免临时项目与静态产物进入版本控制。
+- 已知边界：桌面静态包目前是迁移壳层，客户端仍有 `/api/*` fetch；下一步应建立 Tauri command bridge，并优先迁移 `/instructions` 这条读写边界清楚的路径。
+- 通过：`npm run build:desktop-web`
+- 通过：`test -f out/index.html && find out -maxdepth 2 -type f | sort | sed -n '1,40p'`
+- 通过：`find out -path '*/api/*' -print` 无输出
+- 通过：`npx tsc --noEmit`
+- 通过：`npm test`
+- 通过：`npm run build`
+- 通过：`cargo check --manifest-path src-tauri/Cargo.toml`
+- 通过：`git diff --check`
+
 # 2026-06-22 自定义 Agent 与 Skill 路径选择
 
 ## Spec
@@ -41,6 +374,37 @@
 - 通过：`npm run build`
 - 通过：`git diff --check`
 - 通过：浏览器打开 `http://localhost:3003/settings`，确认 Agent 管理列表、路径检测状态和新增 Agent 弹窗正常渲染。
+
+## 2026-06-22 桌面端分类管理空列表修复
+
+### Spec
+
+- 目标：Tauri 桌面生产运行时，设置页“分类管理”读取、创建、编辑、删除和恢复预设分类都使用本地配置，不再因为依赖 Next API 而显示空列表。
+- 范围：分类管理客户端封装、Tauri 分类 CRUD command、设置页接入和回归测试。
+- 非目标：不改变分类数据结构，不恢复自动分类匹配逻辑，不迁移通用设置页的其它能力。
+- 验证：Web 模式仍请求 `/api/categories`；Tauri 模式调用本地 command；设置页能通过客户端加载分类。
+
+### Tasks
+
+- [x] 定位分类管理空列表根因
+- [x] 新增分类客户端封装
+- [x] 新增 Tauri 分类 CRUD command
+- [x] 接入 SettingsPage 分类管理
+- [x] 增加回归测试
+- [x] 运行相关测试、类型检查和 diff 检查
+
+### Review
+
+- 根因：设置页分类管理仍直接请求 `/api/categories`，桌面静态包没有 Next API runtime，因此加载失败后保留空数组。
+- 结果：新增 `src/lib/config/categories-client.ts`，Web 模式继续走 `/api/categories`，Tauri 模式调用 `get_categories`、`create_category`、`update_category`、`delete_category`。
+- 结果：`SettingsPage` 分类加载、创建、编辑、删除和恢复预设分类都改为通过 client bridge；恢复预设改为顺序写入，避免本地 JSON 并发覆盖。
+- 结果：Rust 侧新增分类 CRUD commands，并继续读写同一个 `config/categories.json`。
+- 通过：`npm test -- src/lib/config/categories-client.test.ts src/components/settings/settings-page.test.tsx`
+- 通过：`npm test`
+- 通过：`npx tsc --noEmit`
+- 通过：`cargo check`
+- 通过：`cargo fmt --check`
+- 通过：`git diff --check`
 
 ## Follow-up: 隐藏 Agent ID
 

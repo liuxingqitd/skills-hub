@@ -8,6 +8,10 @@ import remarkGfm from "remark-gfm";
 
 import type { InstructionsPageModel } from "@/src/types/instructions";
 import { useToast } from "@/src/components/ui/toast";
+import {
+  loadInstructionsModel,
+  saveInstructionAsset,
+} from "@/src/lib/instructions/instructions-client";
 
 type EditorViewMode = "edit" | "preview" | "split";
 
@@ -32,9 +36,7 @@ export function EditorPage() {
     setIsLoading(true);
     setLoadError(null);
     try {
-      const res = await fetch("/api/instructions", { cache: "no-store" });
-      if (!res.ok) throw new Error(`加载失败：${res.status}`);
-      const data = (await res.json()) as InstructionsPageModel;
+      const data = await loadInstructionsModel();
       setModel(data);
       if (data.assets.length > 0) {
         setSelectedAssetId((current) =>
@@ -70,19 +72,11 @@ export function EditorPage() {
     setIsSaving(true);
     setSaveError(null);
     try {
-      const res = await fetch("/api/instructions/update", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          path: selected.path,
-          content: draft,
-          previousHash: selected.contentHash,
-        }),
+      await saveInstructionAsset({
+        path: selected.path,
+        content: draft,
+        previousHash: selected.contentHash,
       });
-      const result = (await res.json()) as { ok?: boolean; error?: string };
-      if (!res.ok || result.ok === false) {
-        throw new Error(result.error || `保存失败：${res.status}`);
-      }
       await loadInstructions();
       addToast(`${selected.title} 已保存`);
       return true;

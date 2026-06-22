@@ -27,6 +27,17 @@ import { useToast } from "@/src/components/ui/toast";
 import { Badge } from "@/src/components/ui/badge";
 import { ConfirmDialog } from "@/src/components/ui/modal";
 import { AgentIcon } from "@/src/components/ui/agent-icon";
+import { loadRuntimeSkillBoardModel } from "@/src/lib/board/skill-board-client";
+import {
+  installDashboardSkill,
+  loadDashboardSkillContent,
+  removeDashboardSkill,
+  runDashboardSync,
+  setDashboardCustomSkill,
+  setDashboardSkillCategories,
+  type InstallResult,
+  type SyncRequestBody,
+} from "@/src/lib/board/dashboard-actions-client";
 
 /* ============================================================
    Types
@@ -34,32 +45,6 @@ import { AgentIcon } from "@/src/components/ui/agent-icon";
 
 type ViewMode = "card" | "list";
 type FilterMode = "all" | "needs_sync" | "broken";
-type SyncRequestBody = { skillName: string | null; types: string[] };
-
-type InstallResult = {
-  discovered: Array<{ name: string }>;
-  completed: Array<{
-    skillName: string;
-    agentId: string;
-    agentName: string;
-    targetPath: string;
-  }>;
-  skipped: Array<{
-    skillName: string;
-    agentId: string;
-    agentName: string;
-    targetPath: string;
-    reason: string;
-  }>;
-  failed: Array<{
-    skillName: string;
-    agentId: string;
-    agentName: string;
-    targetPath: string;
-    error: string;
-  }>;
-};
-
 /* ============================================================
    Dashboard Page
    ============================================================ */
@@ -72,6 +57,7 @@ const Icons = {
 export function DashboardPage({ model }: { model: SkillBoardModel }) {
   const router = useRouter();
   const { addToast } = useToast();
+  const [activeModel, setActiveModel] = useState(model);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
@@ -97,12 +83,19 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
   }
 
   function refresh() {
-    startTransition(() => router.refresh());
+    startTransition(() => {
+      void loadRuntimeSkillBoardModel()
+        .then((nextModel) => {
+          if (nextModel) setActiveModel(nextModel);
+          else router.refresh();
+        })
+        .catch(() => router.refresh());
+    });
   }
 
   const rows = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return model.rows.filter((row) => {
+    return activeModel.rows.filter((row) => {
       if (selectedCategory === "__custom" && !row.isCustom) return false;
       if (selectedCategory === "__opensource" && row.isCustom) return false;
       if (selectedCategory && selectedCategory !== "__custom" && selectedCategory !== "__opensource" && !row.categoryIds.includes(selectedCategory)) return false;
@@ -113,25 +106,39 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
       if (!q) return true;
       return `${row.name} ${row.description}`.toLowerCase().includes(q);
     });
-  }, [model.rows, searchQuery, filterMode, selectedCategory]);
+  }, [activeModel.rows, searchQuery, filterMode, selectedCategory]);
 
   const filteredSkill = selectedSkill
-    ? model.rows.find((r) => r.name === selectedSkill.name) ?? null
+    ? activeModel.rows.find((r) => r.name === selectedSkill.name) ?? null
     : null;
 
   // ---- Stats ----
   const counts = useMemo(() => {
-    const all = model.rows.length;
-    const installed = model.rows.filter((r) =>
+    const all = activeModel.rows.length;
+    const installed = activeModel.rows.filter((r) =>
       r.cells.every((c) => c.displayStatus === "installed")
     ).length;
-    const needsSync = model.rows.filter((r) => r.canSync).length;
-    const broken = model.rows.filter((r) =>
+    const needsSync = activeModel.rows.filter((r) => r.canSync).length;
+    const broken = activeModel.rows.filter((r) =>
       r.cells.some((c) => c.displayStatus === "broken")
     ).length;
-    const custom = model.rows.filter((r) => r.isCustom).length;
+    const custom = activeModel.rows.filter((r) => r.isCustom).length;
     return { all, installed, needsSync, broken, custom };
-  }, [model.rows]);
+  }, [activeModel.rows]);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadRuntimeSkillBoardModel()
+      .then((nextModel) => {
+        if (!cancelled && nextModel) setActiveModel(nextModel);
+      })
+      .catch(() => {
+        if (!cancelled) setSyncError("桌面数据加载失败，请重新打开应用。");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // ---- API calls ----
   async function runSync(body: SyncRequestBody, key: string) {
@@ -139,13 +146,7 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
     setInstallResult(null);
     setBusyAction(key);
     try {
-      const res = await fetch("/api/sync/apply", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error(`同步失败：${res.status}`);
-      const result = await res.json();
+      const result = await runDashboardSync(body);
       if (result.failed?.length > 0) {
         const reasons = result.failed.map((f: { agentName: string; error: string }) => `${f.agentName}: ${f.error}`).join("；");
         throw new Error(`同步失败：${reasons}`);
@@ -170,13 +171,7 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
     setInstallResult(null);
     setBusyAction("install");
     try {
-      const res = await fetch("/api/skills/install", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source }),
-      });
-      const data: InstallResult & { error?: string } = await res.json();
-      if (!res.ok) throw new Error(data.error ?? `安装失败：${res.status}`);
+      const data = await installDashboardSkill(source);
       setInstallResult(data);
       setInstallSource("");
       setShowInstallModal(false);
@@ -194,12 +189,7 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
     setShowDeleteConfirm(false);
     setBusyAction(`delete:${filteredSkill.name}`);
     try {
-      const res = await fetch("/api/sync/remove", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ skillName: filteredSkill.name }),
-      });
-      if (!res.ok) throw new Error(`删除失败：${res.status}`);
+      await removeDashboardSkill(filteredSkill.name);
       setSelectedSkill(null);
       addToast(`已删除 ${filteredSkill.name}`);
       refresh();
@@ -213,12 +203,7 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
   async function handleToggleCustom(skillName: string, isCustom: boolean) {
     setBusyAction(`tag:${skillName}`);
     try {
-      const res = await fetch("/api/custom-tag", {
-        method: isCustom ? "DELETE" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ skillName }),
-      });
-      if (!res.ok) throw new Error(`更新失败：${res.status}`);
+      await setDashboardCustomSkill(skillName, !isCustom);
       addToast(isCustom ? "已取消自研标记" : "已标记为自研");
       refresh();
     } catch (err) {
@@ -247,12 +232,10 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
     let cancelled = false;
     setIsLoadingContent(true);
     setSkillContent(null);
-    const url = `/api/skills/content?path=${encodeURIComponent(selectedSkill.skillFilePath)}`;
-    fetch(url)
-      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
-      .then((data) => {
+    loadDashboardSkillContent(selectedSkill.skillFilePath)
+      .then((content) => {
         if (!cancelled) {
-          setSkillContent(data.content ?? "未找到 SKILL.md。");
+          setSkillContent(content);
           setIsLoadingContent(false);
         }
       })
@@ -294,7 +277,7 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
         <button
           className="btn btn-primary"
           onClick={() => runSync({ skillName: null, types: ["create_copy", "repair_copy"] }, "sync-all")}
-          disabled={uiLocked || model.pendingSyncCount === 0}
+          disabled={uiLocked || activeModel.pendingSyncCount === 0}
         >
           {isBusy("sync-all") ? (
             <LoaderCircle size={14} className="spin" />
@@ -318,9 +301,9 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
           </div>
           <div className="stat-card">
             <div className="stat-label">连接 Agent</div>
-            <div className="stat-value">{model.agents.length}</div>
+            <div className="stat-value">{activeModel.agents.length}</div>
             <div className="stat-change up">
-              <ArrowUp size={12} /> {model.agents.filter((a) => a.enabled).length} 个在线
+              <ArrowUp size={12} /> {activeModel.agents.filter((a) => a.enabled).length} 个在线
             </div>
           </div>
           <div className="stat-card">
@@ -382,7 +365,7 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
 
         {/* Category filter */}
         <CategoryFilterBar
-          model={model}
+          model={activeModel}
           selectedCategory={selectedCategory}
           onCategoryChange={setSelectedCategory}
         />
@@ -426,7 +409,7 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
               <SkillCard
                 key={row.name}
                 row={row}
-                categories={model.categories}
+                categories={activeModel.categories}
                 onClick={() => setSelectedSkill(row)}
                 onSync={(e) => {
                   e.stopPropagation();
@@ -445,7 +428,7 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
               <SkillRow
                 key={row.name}
                 row={row}
-                categories={model.categories}
+                categories={activeModel.categories}
                 onClick={() => setSelectedSkill(row)}
                 onSync={(e) => {
                   e.stopPropagation();
@@ -477,7 +460,7 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
       {filteredSkill && (
         <SkillDetailDrawer
           skill={filteredSkill}
-          categories={model.categories}
+          categories={activeModel.categories}
           uiLocked={uiLocked}
           skillContent={skillContent}
           showCategoryEditor={showCategoryEditor}
@@ -502,15 +485,7 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
           onSaveCategories={async () => {
             setBusyAction(`cat:${filteredSkill.name}`);
             try {
-              const res = await fetch("/api/skill-categories", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  skillName: filteredSkill.name,
-                  categoryIds: draftCategoryIds,
-                }),
-              });
-              if (!res.ok) throw new Error(`更新失败：${res.status}`);
+              await setDashboardSkillCategories(filteredSkill.name, draftCategoryIds);
               addToast("分类已更新");
               setShowCategoryEditor(false);
               refresh();

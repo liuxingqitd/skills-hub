@@ -3,10 +3,19 @@ import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const workspaceRoot = dirname(fileURLToPath(import.meta.url));
+const isDesktopBuild = process.env.SKILLS_HUB_DESKTOP === "1";
 
 const nextConfig: NextConfig = {
   typedRoutes: true,
   outputFileTracingRoot: workspaceRoot,
+  ...(isDesktopBuild
+    ? {
+        output: "export" as const,
+        images: {
+          unoptimized: true
+        }
+      }
+    : {}),
   webpack: (config, { dev }) => {
     if (dev) {
       config.watchOptions = { poll: 5000, aggregateTimeout: 1000 };

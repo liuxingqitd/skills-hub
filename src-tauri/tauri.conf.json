@@ -1,0 +1,42 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Skills Hub",
+  "version": "0.1.0",
+  "identifier": "com.skillshub.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build:desktop-web",
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../out"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Skills Hub",
+        "label": "main",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 960,
+        "minHeight": 640,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["dmg", "nsis", "msi"],
+    "icon": ["icons/icon.png"],
+    "category": "DeveloperTool",
+    "shortDescription": "Local AI agent skills manager",
+    "longDescription": "Skills Hub manages local AI agent skills across developer tools.",
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    },
+    "windows": {
+      "digestAlgorithm": "sha256"
+    }
+  }
+}
