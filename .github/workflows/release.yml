@@ -60,4 +60,4 @@ jobs:
           prerelease: false
           generateReleaseNotes: true
           args: ${{ matrix.args }}
-          releaseAssetNamePattern: "Skills-Hub-[version]-[platform]-[arch]-[bundle][setup][ext]"
+          assetNamePattern: "Skills-Hub-[version]-[platform]-[arch]-[bundle][setup][ext]"

@@ -8,7 +8,7 @@ const workspaceRoot = resolve(scriptDir, "..");
 const shadowRoot = resolve(workspaceRoot, ".next-desktop-export");
 const shadowOut = join(shadowRoot, "out");
 const finalOut = join(workspaceRoot, "out");
-const command = process.platform === "win32" ? "npx.cmd" : "npx";
+const command = process.platform === "win32" ? "npm.cmd" : "npm";
 
 await rm(shadowRoot, { recursive: true, force: true });
 await mkdir(shadowRoot, { recursive: true });
@@ -65,9 +65,10 @@ async function linkIfExists(relativePath) {
 }
 
 async function runNextBuild() {
-  const child = spawn(command, ["next", "build"], {
+  const child = spawn(command, ["exec", "next", "build"], {
     cwd: shadowRoot,
     stdio: "inherit",
+    shell: process.platform === "win32",
     env: {
       ...process.env,
       SKILLS_HUB_DESKTOP: "1",
