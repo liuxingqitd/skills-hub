@@ -1,3 +1,41 @@
+# 2026-06-23 macOS Intel 安装包架构兼容
+
+## Spec
+
+- 目标：修复 Intel Mac 打开 macOS 安装包时报“这台 Mac 不支持此应用程序 / bad CPU type in executable”的问题。
+- 根因：当前 GitHub Release 的 macOS workflow 只构建一个 `.dmg`，在 Apple Silicon runner 上产物为 `arm64`，Intel Mac 需要 `x86_64` 或 universal build。
+- 范围：发布流程拆分 macOS Intel 与 macOS Apple Silicon 两个安装包；README 明确用户如何选择安装包和如何诊断架构；升版本到 `0.1.3` 并触发 release workflow。
+- 非目标：本轮不做 Developer ID 签名/公证，不解决所有 Gatekeeper 首次打开安全提示。
+- 设计方向：优先使用原生 GitHub runner 构建对应架构：`macos-13` 产出 Intel/x86_64，`macos-latest` 产出 Apple Silicon/arm64，避免在单 runner 上做复杂交叉构建。
+
+## Tasks
+
+- [x] 核对当前 release workflow 的 macOS 构建矩阵
+- [x] 将 macOS release 拆成 Intel 与 Apple Silicon 两个构建目标
+- [x] 更新 README，说明 Intel Mac 下载 x64/x86_64 包，Apple Silicon 下载 arm64/aarch64 包
+- [x] 将发布版本升到 `0.1.3`
+- [x] 运行 workflow 配置和文本检查
+- [x] 记录 Review / 复盘
+
+## Verify
+
+- release workflow 中存在独立的 macOS Intel job，运行在 `macos-13`。
+- release workflow 中存在独立的 macOS Apple Silicon job，运行在 `macos-latest`。
+- macOS Intel job 使用 `--target x86_64-apple-darwin`。
+- macOS Apple Silicon job 使用 `--target aarch64-apple-darwin`。
+- README 明确截图中的错误属于 CPU 架构不匹配，不应通过 `xattr` 或权限修复。
+- npm、Tauri 和 Cargo 版本号保持一致。
+
+## Review
+
+- 根因：用户截图中的错误不是安装位置、权限或 `com.apple.quarantine`，而是 Intel Mac 无法执行 `arm64` Mach-O。
+- 结果：release workflow 新增 `macOS Intel` 构建，使用 `macos-13` 和 `--target x86_64-apple-darwin` 产出 Intel `.dmg`。
+- 结果：release workflow 保留 Apple Silicon 构建，显式使用 `--target aarch64-apple-darwin` 产出 arm64 `.dmg`。
+- 结果：README 明确普通用户应按芯片架构选择 macOS 包，并说明架构不匹配不能用 `xattr` 修复。
+- 结果：发布版本升到 `0.1.3`，准备通过 `v0.1.3` tag 触发 release workflow。
+- 通过：`ruby -e "require 'yaml'; YAML.load_file('.github/workflows/release.yml'); puts 'yaml ok'"`
+- 通过：`git diff --check`
+
 # 2026-06-23 合并桌面客户端到 main 并更新 README
 
 ## Spec

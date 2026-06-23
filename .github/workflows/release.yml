@@ -22,9 +22,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - label: macOS
+          - label: macOS Intel
+            os: macos-13
+            args: "--target x86_64-apple-darwin --bundles dmg"
+          - label: macOS Apple Silicon
             os: macos-latest
-            args: "--bundles dmg"
+            args: "--target aarch64-apple-darwin --bundles dmg"
           - label: Windows
             os: windows-latest
             args: "--bundles nsis,msi"
