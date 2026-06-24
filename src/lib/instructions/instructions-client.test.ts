@@ -3,8 +3,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  loadInstructionPaths,
   loadInstructionsModel,
   saveInstructionAsset,
+  saveInstructionPaths,
+  selectInstructionFile,
 } from "@/src/lib/instructions/instructions-client";
 
 const emptyModel = {
@@ -57,15 +60,55 @@ describe("instructions client", () => {
     );
   });
 
+  it("loads and saves instruction paths through HTTP outside Tauri", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === "/api/settings" && !init?.method) {
+        return Response.json({ instructionPaths: { codex: "/tmp/custom/AGENTS.md" } });
+      }
+      return Response.json({ instructionPaths: { claude: "/tmp/custom/CLAUDE.md" } });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(loadInstructionPaths()).resolves.toEqual({ codex: "/tmp/custom/AGENTS.md" });
+    await expect(saveInstructionPaths({ claude: "/tmp/custom/CLAUDE.md" })).resolves.toEqual({
+      claude: "/tmp/custom/CLAUDE.md",
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/settings", { cache: "no-store" });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/settings",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ instructionPaths: { claude: "/tmp/custom/CLAUDE.md" } }),
+      })
+    );
+  });
+
+  it("selects an instruction file through HTTP outside Tauri", async () => {
+    const fetchMock = vi.fn(async () => Response.json({ path: "/tmp/custom/AGENTS.md" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(selectInstructionFile()).resolves.toBe("/tmp/custom/AGENTS.md");
+    expect(fetchMock).toHaveBeenCalledWith("/api/system/select-file", { method: "POST" });
+  });
+
   it("uses Tauri commands when running in a Tauri WebView", async () => {
     const invoke = vi.fn(async (command: string) => {
       if (command === "get_instructions_model") return emptyModel;
+      if (command === "get_instruction_paths") return { codex: "/tmp/custom/AGENTS.md" };
+      if (command === "set_instruction_paths") return { hermes: "/tmp/custom/HERMES.md" };
+      if (command === "select_instruction_file") return { path: "/tmp/chosen/AGENTS.md" };
       return { ok: true, contentHash: "next" };
     });
     (window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = { invoke };
     vi.stubGlobal("fetch", vi.fn());
 
     await expect(loadInstructionsModel()).resolves.toEqual(emptyModel);
+    await expect(loadInstructionPaths()).resolves.toEqual({ codex: "/tmp/custom/AGENTS.md" });
+    await expect(saveInstructionPaths({ hermes: "/tmp/custom/HERMES.md" })).resolves.toEqual({
+      hermes: "/tmp/custom/HERMES.md",
+    });
+    await expect(selectInstructionFile()).resolves.toBe("/tmp/chosen/AGENTS.md");
     await expect(
       saveInstructionAsset({
         path: "/tmp/AGENTS.md",
@@ -75,8 +118,22 @@ describe("instructions client", () => {
     ).resolves.toEqual({ ok: true, contentHash: "next" });
 
     expect(invoke).toHaveBeenNthCalledWith(1, "get_instructions_model", {}, undefined);
+    expect(invoke).toHaveBeenNthCalledWith(2, "get_instruction_paths", {}, undefined);
     expect(invoke).toHaveBeenNthCalledWith(
-      2,
+      3,
+      "set_instruction_paths",
+      {
+        input: {
+          instructionPaths: {
+            hermes: "/tmp/custom/HERMES.md",
+          },
+        },
+      },
+      undefined
+    );
+    expect(invoke).toHaveBeenNthCalledWith(4, "select_instruction_file", {}, undefined);
+    expect(invoke).toHaveBeenNthCalledWith(
+      5,
       "update_instruction_asset",
       {
         input: {

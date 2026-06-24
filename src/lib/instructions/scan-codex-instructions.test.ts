@@ -53,4 +53,35 @@ describe("scanCodexInstructions", () => {
     expect(main?.canCreate).toBe(false);
     expect(main?.contentPreview).toBe("");
   });
+
+  it("marks missing instructions as not editable", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scan-codex-missing-"));
+    tempDirs.push(root);
+    await mkdir(root, { recursive: true });
+
+    const result = await scanCodexInstructions(root);
+    const main = result.assets.find((asset) => asset.kind === "main");
+
+    expect(main?.exists).toBe(false);
+    expect(main?.status).toBe("missing");
+    expect(main?.isEditable).toBe(false);
+    expect(main?.canCreate).toBe(false);
+  });
+
+  it("scans a custom instruction file path", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scan-codex-custom-"));
+    tempDirs.push(root);
+    const customDir = join(root, "rules");
+    const customPath = join(customDir, "codex-global.md");
+    await mkdir(customDir, { recursive: true });
+    await writeFile(customPath, "# Custom Codex", "utf8");
+
+    const result = await scanCodexInstructions(join(root, ".codex"), customPath);
+    const main = result.assets.find((asset) => asset.kind === "main");
+
+    expect(result.rootPath).toBe(customDir);
+    expect(main?.path).toBe(customPath);
+    expect(main?.exists).toBe(true);
+    expect(main?.contentPreview).toBe("# Custom Codex");
+  });
 });

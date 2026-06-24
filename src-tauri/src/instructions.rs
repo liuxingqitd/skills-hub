@@ -1,8 +1,10 @@
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
+    collections::HashMap,
     env, fs,
     path::{Path, PathBuf},
+    process::Command,
 };
 
 #[derive(Serialize, Clone)]
@@ -59,6 +61,27 @@ pub struct UpdateInstructionInput {
     previous_hash: Option<String>,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetInstructionPathsInput {
+    instruction_paths: HashMap<String, String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SelectInstructionFileResult {
+    path: String,
+}
+
+#[derive(Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct AppSettings {
+    #[serde(default = "default_sync_mode")]
+    sync_mode: String,
+    #[serde(default)]
+    instruction_paths: HashMap<String, String>,
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateInstructionResult {
@@ -89,16 +112,21 @@ impl InstructionCommandError {
 struct AgentInstructionConfig {
     agent: &'static str,
     root_dir: PathBuf,
-    main_file_name: &'static str,
+    main_file_name: String,
     id: &'static str,
     title: &'static str,
     description: &'static str,
     load_behavior: &'static str,
 }
 
+fn default_sync_mode() -> String {
+    "copy".to_string()
+}
+
 #[tauri::command]
 pub fn get_instructions_model() -> InstructionsPageModel {
-    let surfaces = instruction_configs()
+    let settings = read_settings();
+    let surfaces = instruction_configs(&settings.instruction_paths)
         .iter()
         .map(scan_agent_instructions)
         .collect::<Vec<_>>();
@@ -122,7 +150,8 @@ pub fn get_instructions_model() -> InstructionsPageModel {
 pub fn update_instruction_asset(
     input: UpdateInstructionInput,
 ) -> Result<UpdateInstructionResult, InstructionCommandError> {
-    let (target_path, root_path) = resolve_update_target(&input.path)?;
+    let settings = read_settings();
+    let (target_path, root_path) = resolve_update_target(&input.path, &settings.instruction_paths)?;
     let current_content = fs::read_to_string(&target_path).map_err(|_| {
         InstructionCommandError::new("NOT_FOUND", "目标文件不存在，请重新加载后再试。")
     })?;
@@ -148,8 +177,30 @@ pub fn update_instruction_asset(
     })
 }
 
+#[tauri::command]
+pub fn get_instruction_paths() -> HashMap<String, String> {
+    read_settings().instruction_paths
+}
+
+#[tauri::command]
+pub fn set_instruction_paths(input: SetInstructionPathsInput) -> HashMap<String, String> {
+    let mut settings = read_settings();
+    settings.instruction_paths = normalize_instruction_paths(&input.instruction_paths);
+    write_settings(&settings);
+    settings.instruction_paths
+}
+
+#[tauri::command]
+pub fn select_instruction_file() -> Result<SelectInstructionFileResult, String> {
+    let selected = select_file().map_err(|error| error.to_string())?;
+    if selected.trim().is_empty() {
+        return Err("No file selected".to_string());
+    }
+    Ok(SelectInstructionFileResult { path: selected })
+}
+
 fn scan_agent_instructions(config: &AgentInstructionConfig) -> InstructionSurface {
-    let root_file = config.root_dir.join(config.main_file_name);
+    let root_file = config.root_dir.join(&config.main_file_name);
     let root_content = fs::read_to_string(&root_file).ok();
     let exists = root_content.is_some();
     let content_hash = root_content
@@ -170,7 +221,7 @@ fn scan_agent_instructions(config: &AgentInstructionConfig) -> InstructionSurfac
         parent_path: None,
         content_preview: root_content,
         content_hash,
-        is_editable: true,
+        is_editable: exists,
         can_create: false,
     };
 
@@ -187,7 +238,7 @@ fn scan_agent_instructions(config: &AgentInstructionConfig) -> InstructionSurfac
     }
 }
 
-fn instruction_configs() -> Vec<AgentInstructionConfig> {
+fn instruction_configs(overrides: &HashMap<String, String>) -> Vec<AgentInstructionConfig> {
     let home = home_dir();
     let claude_root = home.join(".claude");
     let codex_root = env::var_os("CODEX_HOME")
@@ -206,11 +257,18 @@ fn instruction_configs() -> Vec<AgentInstructionConfig> {
             }
         });
 
+    let default_claude_path = claude_root.join("CLAUDE.md");
+    let default_codex_path = codex_root.join("AGENTS.md");
+    let default_hermes_path = hermes_root.join("AGENTS.md");
+    let claude_path = override_path(overrides, "claude").unwrap_or(default_claude_path);
+    let codex_path = override_path(overrides, "codex").unwrap_or(default_codex_path);
+    let hermes_path = override_path(overrides, "hermes").unwrap_or(default_hermes_path);
+
     vec![
         AgentInstructionConfig {
             agent: "claude",
-            root_dir: claude_root,
-            main_file_name: "CLAUDE.md",
+            root_dir: parent_or_home(&claude_path),
+            main_file_name: file_name_or_default(&claude_path, "CLAUDE.md"),
             id: "claude:CLAUDE.md",
             title: "~/.claude/CLAUDE.md",
             description: "Claude Code 的用户级全局指令文件。",
@@ -219,8 +277,8 @@ fn instruction_configs() -> Vec<AgentInstructionConfig> {
         },
         AgentInstructionConfig {
             agent: "codex",
-            root_dir: codex_root,
-            main_file_name: "AGENTS.md",
+            root_dir: parent_or_home(&codex_path),
+            main_file_name: file_name_or_default(&codex_path, "AGENTS.md"),
             id: "codex:AGENTS.md",
             title: "~/.codex/AGENTS.md",
             description: "Codex 的全局 AGENTS 指令文件。",
@@ -228,8 +286,8 @@ fn instruction_configs() -> Vec<AgentInstructionConfig> {
         },
         AgentInstructionConfig {
             agent: "hermes",
-            root_dir: hermes_root,
-            main_file_name: "AGENTS.md",
+            root_dir: parent_or_home(&hermes_path),
+            main_file_name: file_name_or_default(&hermes_path, "AGENTS.md"),
             id: "hermes:AGENTS.md",
             title: "~/.hermes/AGENTS.md",
             description: "Hermes Agent 的用户级全局指令文件。",
@@ -238,7 +296,10 @@ fn instruction_configs() -> Vec<AgentInstructionConfig> {
     ]
 }
 
-fn resolve_update_target(path: &str) -> Result<(PathBuf, PathBuf), InstructionCommandError> {
+fn resolve_update_target(
+    path: &str,
+    overrides: &HashMap<String, String>,
+) -> Result<(PathBuf, PathBuf), InstructionCommandError> {
     let requested = PathBuf::from(path);
     if !requested.is_absolute() {
         return Err(InstructionCommandError::new(
@@ -247,7 +308,7 @@ fn resolve_update_target(path: &str) -> Result<(PathBuf, PathBuf), InstructionCo
         ));
     }
 
-    for config in instruction_configs() {
+    for config in instruction_configs(overrides) {
         let target = config.root_dir.join(config.main_file_name);
         if normalize_path(&requested) == normalize_path(&target) {
             return Ok((target, config.root_dir));
@@ -323,6 +384,118 @@ fn normalize_path(path: &Path) -> PathBuf {
 
 fn is_inside(root: &Path, candidate: &Path) -> bool {
     candidate == root || candidate.starts_with(root)
+}
+
+fn settings_path() -> PathBuf {
+    env::current_dir()
+        .unwrap_or_else(|_| PathBuf::from("."))
+        .join("config")
+        .join("settings.json")
+}
+
+fn read_settings() -> AppSettings {
+    fs::read_to_string(settings_path())
+        .ok()
+        .and_then(|content| serde_json::from_str::<AppSettings>(&content).ok())
+        .map(|mut settings| {
+            settings.instruction_paths = normalize_instruction_paths(&settings.instruction_paths);
+            settings
+        })
+        .unwrap_or_default()
+}
+
+fn write_settings(settings: &AppSettings) {
+    let path = settings_path();
+    if let Some(parent) = path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    if let Ok(content) = serde_json::to_string_pretty(settings) {
+        let _ = fs::write(path, format!("{content}\n"));
+    }
+}
+
+fn normalize_instruction_paths(paths: &HashMap<String, String>) -> HashMap<String, String> {
+    let mut normalized = HashMap::new();
+    for agent in ["claude", "codex", "hermes"] {
+        if let Some(path) = paths
+            .get(agent)
+            .map(|value| value.trim())
+            .filter(|value| !value.is_empty())
+        {
+            normalized.insert(agent.to_string(), path.to_string());
+        }
+    }
+    normalized
+}
+
+fn override_path(paths: &HashMap<String, String>, agent: &str) -> Option<PathBuf> {
+    paths
+        .get(agent)
+        .map(|path| path.trim())
+        .filter(|path| !path.is_empty())
+        .map(PathBuf::from)
+}
+
+fn parent_or_home(path: &Path) -> PathBuf {
+    path.parent().map(PathBuf::from).unwrap_or_else(home_dir)
+}
+
+fn file_name_or_default(path: &Path, fallback: &str) -> String {
+    path.file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .filter(|name| !name.is_empty())
+        .unwrap_or_else(|| fallback.to_string())
+}
+
+fn select_file() -> std::io::Result<String> {
+    if cfg!(target_os = "macos") {
+        let output = Command::new("osascript")
+            .args([
+                "-e",
+                "POSIX path of (choose file with prompt \"选择全局规则 Markdown 文件\" of type {\"md\"})",
+            ])
+            .output()?;
+        return Ok(String::from_utf8_lossy(&output.stdout).trim().to_string());
+    }
+
+    if cfg!(target_os = "windows") {
+        let script = [
+            "Add-Type -AssemblyName System.Windows.Forms",
+            "$dialog = New-Object System.Windows.Forms.OpenFileDialog",
+            "$dialog.Title = '选择全局规则 Markdown 文件'",
+            "$dialog.Filter = 'Markdown files (*.md)|*.md|All files (*.*)|*.*'",
+            "if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $dialog.FileName }",
+        ]
+        .join("; ");
+        let output = Command::new("powershell.exe")
+            .args(["-NoProfile", "-STA", "-Command", &script])
+            .output()?;
+        return Ok(String::from_utf8_lossy(&output.stdout).trim().to_string());
+    }
+
+    for (command, args) in [
+        (
+            "zenity",
+            vec![
+                "--file-selection",
+                "--title=选择全局规则 Markdown 文件",
+                "--file-filter=Markdown files | *.md",
+            ],
+        ),
+        ("kdialog", vec!["--getopenfilename", ".", "*.md"]),
+    ] {
+        if let Ok(output) = Command::new(command).args(args).output() {
+            let selected = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !selected.is_empty() {
+                return Ok(selected);
+            }
+        }
+    }
+
+    Err(std::io::Error::new(
+        std::io::ErrorKind::NotFound,
+        "File picker unavailable",
+    ))
 }
 
 fn home_dir() -> PathBuf {

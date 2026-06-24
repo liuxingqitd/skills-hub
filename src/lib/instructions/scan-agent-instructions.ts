@@ -1,5 +1,3 @@
-import { join } from "node:path";
-
 import { hashInstructionContent } from "@/src/lib/instructions/hash-instruction-content";
 import { readPreview } from "@/src/lib/instructions/read-preview";
 import type { InstructionAgent, InstructionAsset, InstructionSurface } from "@/src/types/instructions";
@@ -15,9 +13,9 @@ interface ScanAgentConfig {
 export async function scanAgentInstructions(
   agent: InstructionAgent,
   rootDir: string,
+  rootFile: string,
   config: ScanAgentConfig
 ): Promise<InstructionSurface> {
-  const rootFile = join(rootDir, config.mainFileName);
   const rootContent = await readPreview(rootFile);
 
   const assets: InstructionAsset[] = [
@@ -36,7 +34,7 @@ export async function scanAgentInstructions(
       parentPath: null,
       contentPreview: rootContent,
       contentHash: rootContent !== null ? hashInstructionContent(rootContent) : null,
-      isEditable: true,
+      isEditable: rootContent !== null,
       canCreate: false
     }
   ];

@@ -7,14 +7,25 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import type { InstructionsPageModel } from "@/src/types/instructions";
+import type { InstructionPathSettings } from "@/src/lib/config/settings-store";
 import { useToast } from "@/src/components/ui/toast";
 import {
+  loadInstructionPaths,
   loadInstructionsModel,
   saveInstructionAsset,
+  saveInstructionPaths,
+  selectInstructionFile,
 } from "@/src/lib/instructions/instructions-client";
+import type { InstructionAsset } from "@/src/types/instructions";
 
 type EditorViewMode = "edit" | "preview" | "split";
 
+function pickDefaultAssetId(assets: InstructionAsset[], current: string | null) {
+  if (current && assets.some((asset) => asset.id === current && asset.exists && asset.isEditable)) {
+    return current;
+  }
+  return assets.find((asset) => asset.exists && asset.isEditable)?.id ?? assets[0]?.id ?? null;
+}
 
 /* ============================================================
    Editor Page
@@ -26,23 +37,27 @@ export function EditorPage() {
   const [model, setModel] = useState<InstructionsPageModel | null>(null);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [pathDraft, setPathDraft] = useState("");
+  const [instructionPaths, setInstructionPaths] = useState<InstructionPathSettings>({});
   const [editorView, setEditorView] = useState<EditorViewMode>("edit");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingPath, setIsSavingPath] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [pathError, setPathError] = useState<string | null>(null);
 
   const loadInstructions = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
     try {
-      const data = await loadInstructionsModel();
+      const [data, paths] = await Promise.all([
+        loadInstructionsModel(),
+        loadInstructionPaths(),
+      ]);
       setModel(data);
-      if (data.assets.length > 0) {
-        setSelectedAssetId((current) =>
-          current && data.assets.some((a) => a.id === current) ? current : data.assets[0].id
-        );
-      }
+      setInstructionPaths(paths);
+      setSelectedAssetId((current) => pickDefaultAssetId(data.assets, current));
       return data;
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "加载失败");
@@ -67,6 +82,11 @@ export function EditorPage() {
     setSaveError(null);
   }, [baseContent, selected?.id]);
 
+  useEffect(() => {
+    setPathDraft(selected?.path ?? "");
+    setPathError(null);
+  }, [selected?.id, selected?.path]);
+
   async function handleSave(): Promise<boolean> {
     if (!selected?.exists || !canSave) return false;
     setIsSaving(true);
@@ -85,6 +105,38 @@ export function EditorPage() {
       return false;
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function applyInstructionPath(path: string | null) {
+    if (!selected) return;
+    setIsSavingPath(true);
+    setPathError(null);
+    try {
+      const nextPaths = { ...instructionPaths };
+      if (path && path.trim()) {
+        nextPaths[selected.agent] = path.trim();
+      } else {
+        delete nextPaths[selected.agent];
+      }
+      const savedPaths = await saveInstructionPaths(nextPaths);
+      setInstructionPaths(savedPaths);
+      await loadInstructions();
+      addToast(path ? "规则文件路径已更新" : "规则文件路径已重置");
+    } catch (err) {
+      setPathError(err instanceof Error ? err.message : "路径保存失败");
+    } finally {
+      setIsSavingPath(false);
+    }
+  }
+
+  async function handlePickInstructionFile() {
+    try {
+      const path = await selectInstructionFile();
+      setPathDraft(path);
+      await applyInstructionPath(path);
+    } catch {
+      setPathError("无法打开文件选择器，请手动输入路径");
     }
   }
 
@@ -192,6 +244,15 @@ export function EditorPage() {
                   </button>
                 </div>
               </div>
+              <PathControls
+                pathDraft={pathDraft}
+                isSavingPath={isSavingPath}
+                pathError={pathError}
+                onPathDraftChange={setPathDraft}
+                onApply={() => applyInstructionPath(pathDraft)}
+                onPick={handlePickInstructionFile}
+                onReset={() => applyInstructionPath(null)}
+              />
               {editorView !== "preview" && (
                 <div className="editor-body">
                   <textarea
@@ -226,21 +287,100 @@ export function EditorPage() {
               )}
             </>
           ) : (
-            <div
-              style={{
-                flex: 1,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "var(--muted2)",
-                fontSize: 14,
-              }}
-            >
-              {loadError ? loadError : "没有可编辑的文件"}
-            </div>
+            <>
+              {selected && (
+                <PathControls
+                  pathDraft={pathDraft}
+                  isSavingPath={isSavingPath}
+                  pathError={pathError}
+                  onPathDraftChange={setPathDraft}
+                  onApply={() => applyInstructionPath(pathDraft)}
+                  onPick={handlePickInstructionFile}
+                  onReset={() => applyInstructionPath(null)}
+                />
+              )}
+              <div
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--muted2)",
+                  fontSize: 14,
+                }}
+              >
+                {loadError ? loadError : "没有可编辑的文件"}
+              </div>
+            </>
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+type PathControlsProps = {
+  pathDraft: string;
+  isSavingPath: boolean;
+  pathError: string | null;
+  onPathDraftChange: (value: string) => void;
+  onApply: () => void;
+  onPick: () => void;
+  onReset: () => void;
+};
+
+function PathControls({
+  pathDraft,
+  isSavingPath,
+  pathError,
+  onPathDraftChange,
+  onApply,
+  onPick,
+  onReset,
+}: PathControlsProps) {
+  return (
+    <div
+      style={{
+        padding: "10px 16px",
+        borderTop: "1px solid var(--border)",
+        borderBottom: "1px solid var(--border)",
+        display: "grid",
+        gap: 8,
+      }}
+    >
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <input
+          value={pathDraft}
+          onChange={(event) => onPathDraftChange(event.target.value)}
+          placeholder="全局规则文件路径"
+          style={{
+            flex: 1,
+            minWidth: 0,
+            height: 32,
+            border: "1px solid var(--border)",
+            borderRadius: 6,
+            background: "var(--bg)",
+            color: "var(--text)",
+            padding: "0 10px",
+            fontSize: 12,
+            fontFamily: "var(--font-mono)",
+          }}
+        />
+        <button className="btn btn-ghost btn-sm" onClick={onPick} disabled={isSavingPath}>
+          选择文件
+        </button>
+        <button className="btn btn-primary btn-sm" onClick={onApply} disabled={isSavingPath}>
+          {isSavingPath ? "应用中……" : "应用路径"}
+        </button>
+        <button className="btn btn-ghost btn-sm" onClick={onReset} disabled={isSavingPath}>
+          重置
+        </button>
+      </div>
+      {pathError && (
+        <div style={{ color: "var(--error)", fontSize: 12 }}>
+          {pathError}
+        </div>
+      )}
     </div>
   );
 }

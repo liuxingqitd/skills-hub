@@ -66,6 +66,53 @@ describe("instruction writes", () => {
     expect(result.contentHash).toBe(hashInstructionContent("# New"));
   });
 
+  it("updates a configured custom Codex instruction file", async () => {
+    const { claudeRootDir, codexRootDir } = await createRoots();
+    const targetPath = join(codexRootDir, "rules", "codex-global.md");
+    await mkdir(join(codexRootDir, "rules"), { recursive: true });
+    await writeFile(targetPath, "# Old", "utf8");
+
+    const result = await updateInstructionAsset(
+      {
+        path: targetPath,
+        content: "# New",
+        previousHash: hashInstructionContent("# Old")
+      },
+      {
+        claudeRootDir,
+        codexRootDir,
+        instructionPaths: { codex: targetPath },
+      }
+    );
+
+    expect(result.path).toBe(targetPath);
+    expect(result.contentHash).toBe(hashInstructionContent("# New"));
+  });
+
+  it("rejects the default Codex file after a custom path is configured", async () => {
+    const { claudeRootDir, codexRootDir } = await createRoots();
+    const defaultPath = join(codexRootDir, "AGENTS.md");
+    const customPath = join(codexRootDir, "rules", "codex-global.md");
+    await mkdir(join(codexRootDir, "rules"), { recursive: true });
+    await writeFile(defaultPath, "# Default", "utf8");
+    await writeFile(customPath, "# Custom", "utf8");
+
+    await expect(
+      updateInstructionAsset(
+        {
+          path: defaultPath,
+          content: "# New",
+          previousHash: hashInstructionContent("# Default")
+        },
+        {
+          claudeRootDir,
+          codexRootDir,
+          instructionPaths: { codex: customPath },
+        }
+      )
+    ).rejects.toMatchObject({ code: "INVALID_PATH" });
+  });
+
   it("updates an existing file when the hash matches", async () => {
     const { claudeRootDir, codexRootDir } = await createRoots();
     const targetPath = join(claudeRootDir, "CLAUDE.md");

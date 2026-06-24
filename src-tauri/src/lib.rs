@@ -20,6 +20,9 @@ pub fn run() {
             agents::update_category,
             agents::validate_agent_path,
             instructions::get_instructions_model,
+            instructions::get_instruction_paths,
+            instructions::select_instruction_file,
+            instructions::set_instruction_paths,
             instructions::update_instruction_asset
         ])
         .run(tauri::generate_context!())

@@ -33,6 +33,7 @@ describe("settings-store", () => {
     const { readSettings } = await import("@/src/lib/config/settings-store");
     const settings = await readSettings();
     expect(settings.syncMode).toBe("copy");
+    expect(settings.instructionPaths).toEqual({});
   });
 
   it("writeSettings persists and readSettings returns updated values", async () => {
@@ -42,8 +43,12 @@ describe("settings-store", () => {
 
     const { readSettings, writeSettings } = await import("@/src/lib/config/settings-store");
 
-    await writeSettings({ syncMode: "symlink" });
+    await writeSettings({
+      syncMode: "symlink",
+      instructionPaths: { codex: "/tmp/custom/AGENTS.md" },
+    });
     const settings = await readSettings();
     expect(settings.syncMode).toBe("symlink");
+    expect(settings.instructionPaths.codex).toBe("/tmp/custom/AGENTS.md");
   });
 });

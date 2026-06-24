@@ -2,6 +2,7 @@ import { homedir } from "node:os";
 import { join, relative } from "node:path";
 
 import { hashInstructionContent } from "@/src/lib/instructions/hash-instruction-content";
+import { rootDirForInstructionPath } from "@/src/lib/instructions/instruction-paths";
 import { readPreview } from "@/src/lib/instructions/read-preview";
 import type { InstructionAsset, InstructionSurface } from "@/src/types/instructions";
 
@@ -18,14 +19,16 @@ function resolveHermesHome(): string {
 }
 
 export async function scanHermesInstructions(
-  hermesRootDir: string = resolveHermesHome()
+  hermesRootDir: string = resolveHermesHome(),
+  instructionPath: string = join(hermesRootDir, "AGENTS.md")
 ): Promise<InstructionSurface> {
-  const rootMain = join(hermesRootDir, "AGENTS.md");
+  const resolvedRootDir = rootDirForInstructionPath(instructionPath);
+  const rootMain = instructionPath;
   const rootMainContent = await readPreview(rootMain);
 
   const assets: InstructionAsset[] = [
     {
-      id: buildId(hermesRootDir, rootMain),
+      id: buildId(resolvedRootDir, rootMain),
       agent: "hermes",
       kind: "main",
       scope: "user",
@@ -39,14 +42,14 @@ export async function scanHermesInstructions(
       parentPath: null,
       contentPreview: rootMainContent,
       contentHash: rootMainContent !== null ? hashInstructionContent(rootMainContent) : null,
-      isEditable: true,
+      isEditable: rootMainContent !== null,
       canCreate: false
     }
   ];
 
   return {
     agent: "hermes",
-    rootPath: hermesRootDir,
+    rootPath: resolvedRootDir,
     assets,
     summary: {
       mainFiles: assets.filter((asset) => asset.kind === "main" && asset.exists).length,

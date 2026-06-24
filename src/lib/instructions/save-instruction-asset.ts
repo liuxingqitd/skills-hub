@@ -1,8 +1,13 @@
 import { lstat, mkdir, realpath, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { dirname, isAbsolute, join, resolve, sep } from "node:path";
+import { dirname, isAbsolute, join, sep } from "node:path";
 
+import { readSettings, type InstructionPathSettings } from "@/src/lib/config/settings-store";
 import { hashInstructionContent } from "@/src/lib/instructions/hash-instruction-content";
+import {
+  agentForPath,
+  resolveInstructionPaths,
+} from "@/src/lib/instructions/instruction-paths";
 import { readPreview } from "@/src/lib/instructions/read-preview";
 
 export type InstructionWriteErrorCode =
@@ -23,6 +28,7 @@ type SharedOptions = {
   claudeRootDir?: string;
   codexRootDir?: string;
   hermesRootDir?: string;
+  instructionPaths?: InstructionPathSettings;
 };
 
 type UpdateInstructionInput = {
@@ -81,7 +87,8 @@ function getRoots(options: SharedOptions) {
       || process.env.HERMES_HOME
       || (process.platform === "win32" && process.env.LOCALAPPDATA
         ? join(process.env.LOCALAPPDATA, "hermes")
-        : join(homedir(), ".hermes"))
+        : join(homedir(), ".hermes")),
+    instructionPaths: options.instructionPaths
   };
 }
 
@@ -90,19 +97,20 @@ function resolveUpdateTarget(path: string, options: ReturnType<typeof getRoots>)
     throw new SaveInstructionError("INVALID_PATH", "目标路径无效。");
   }
 
-  const resolvedPath = resolve(path);
-  const claudeRootFile = join(options.claudeRootDir, "CLAUDE.md");
-  const codexMainFile = join(options.codexRootDir, "AGENTS.md");
-  const hermesMainFile = join(options.hermesRootDir, "AGENTS.md");
+  const paths = resolveInstructionPaths(options.instructionPaths, options);
+  const agent = agentForPath(paths, path);
 
-  if (resolvedPath === resolve(claudeRootFile)) {
-    return { path: claudeRootFile, rootPath: options.claudeRootDir };
+  if (agent === "claude") {
+    const targetPath = paths.claudePath;
+    return { path: targetPath, rootPath: dirname(targetPath) };
   }
-  if (resolvedPath === resolve(codexMainFile)) {
-    return { path: codexMainFile, rootPath: options.codexRootDir };
+  if (agent === "codex") {
+    const targetPath = paths.codexPath;
+    return { path: targetPath, rootPath: dirname(targetPath) };
   }
-  if (resolvedPath === resolve(hermesMainFile)) {
-    return { path: hermesMainFile, rootPath: options.hermesRootDir };
+  if (agent === "hermes") {
+    const targetPath = paths.hermesPath;
+    return { path: targetPath, rootPath: dirname(targetPath) };
   }
 
   throw new SaveInstructionError("INVALID_PATH", "目标路径不在允许更新的全局规则范围内。");
@@ -112,7 +120,11 @@ export async function updateInstructionAsset(
   input: UpdateInstructionInput,
   options: SharedOptions = {}
 ) {
-  const roots = getRoots(options);
+  const settings = options.instructionPaths ? null : await readSettings();
+  const roots = getRoots({
+    ...options,
+    instructionPaths: options.instructionPaths ?? settings?.instructionPaths,
+  });
   const target = resolveUpdateTarget(input.path, roots);
   const currentContent = await readPreview(target.path);
 

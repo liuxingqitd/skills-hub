@@ -1,3 +1,85 @@
+# 2026-06-23 全局规则自定义文件路径
+
+## Spec
+
+- 目标：支持用户为 Claude / Codex / Hermes 分别选择自定义全局规则文件路径，避免自动推断目录不准确导致页面异常或无法编辑。
+- 范围：设置持久化、全局规则扫描/保存路径解析、编辑器路径展示与选择交互、Web 文件选择 API、Tauri 桌面 command。
+- 非目标：不引入多文件规则管理，不改变 skill 路径配置，不实现缺失文件创建。
+- 设计方向：在 `config/settings.json` 增加 `instructionPaths` 覆盖项；没有覆盖时继续使用现有默认路径。保存时只允许写入当前配置解析出的对应文件，保持安全边界。
+
+## Tasks
+
+- [x] 扩展 settings store 保存每个 agent 的自定义规则文件路径
+- [x] 让 Web 扫描和保存逻辑读取自定义路径
+- [x] 让 Tauri 扫描和保存逻辑读取同一份配置
+- [x] 在全局规则编辑器增加手动输入、选择文件、重置路径能力
+- [x] 增加 Web/Tauri 文件选择入口
+- [x] 补充回归测试
+- [x] 运行测试、类型检查、构建和页面验证
+- [x] 记录 Review / 复盘
+
+## Verify
+
+- 用户配置 Claude/Codex/Hermes 任一规则文件路径后，页面展示和保存都使用该路径。
+- 未配置自定义路径时，现有默认路径行为不变。
+- 保存接口不能写入未配置或非默认的任意路径。
+- 桌面静态包不依赖 Next API 完成读取/保存自定义路径。
+
+## Review
+
+- 结果：`config/settings.json` 支持 `instructionPaths`，可分别覆盖 Claude / Codex / Hermes 的全局规则文件路径；未配置时保留原自动推断逻辑。
+- 结果：Web 扫描模型和保存逻辑读取 `instructionPaths`，页面展示和保存都会使用用户指定文件。
+- 结果：Tauri 桌面端新增读取/保存规则路径和选择规则文件 command，静态包不依赖 Next API 完成路径配置。
+- 结果：全局规则编辑器新增路径输入、选择文件、应用路径、重置入口；缺失文件也能先配置路径。
+- 结果：新增 `/api/system/select-file`，Web/dev 模式可调用系统文件选择器选择 Markdown 文件。
+- 结果：保存逻辑收紧为只允许写当前有效配置路径；配置自定义路径后，旧默认路径不再可写。
+- 通过：`npm test -- src/lib/instructions/instructions-client.test.ts src/lib/instructions/scan-codex-instructions.test.ts src/lib/instructions/save-instruction-asset.test.ts src/lib/config/settings-store.test.ts src/components/editor/editor-page.test.tsx`
+- 通过：`npx tsc --noEmit`
+- 通过：`cargo check --manifest-path src-tauri/Cargo.toml`
+- 通过：`npm test`（80 tests）
+- 通过：`npm run build`
+- 通过：`cargo fmt --manifest-path src-tauri/Cargo.toml --check`
+- 通过：`git diff --check`
+- 通过：浏览器打开 `http://localhost:3001/instructions`，路径输入框和选择/应用/重置按钮正常显示，当前规则内容正常加载，无控制台错误；本机 `3000` 已被其他进程占用，Next 自动使用 `3001` 做本轮验证。
+
+# 2026-06-23 全局规则页面异常排查
+
+## Spec
+
+- 目标：修复用户反馈的全局规则使用报错、页面异常问题。
+- 范围：全局规则页面数据加载、客户端保存逻辑、Next API route、Tauri 桌面桥接和底层 instruction 扫描/保存逻辑。
+- 非目标：不重做全局规则编辑器 UI，不改动无关的 skills / sync / agent 配置逻辑。
+- 设计方向：先复现或用测试定位根因，再做最小修复；Web 与桌面静态包行为都要验证。
+
+## Tasks
+
+- [x] 梳理全局规则页面的数据流和保存流
+- [x] 复现页面异常或找到可稳定触发的失败路径
+- [x] 为根因补充回归测试
+- [x] 实现最小修复
+- [x] 运行定向测试、类型检查和必要构建
+- [x] 记录 Review / 复盘
+
+## Verify
+
+- 全局规则页面能加载模型，不因单个 agent 根目录缺失而整体报错。
+- 保存允许范围内的全局规则文件能返回更新后的 asset。
+- Web API 与桌面 Tauri client 的错误处理保持一致。
+- 回归测试覆盖本次根因。
+
+## Review
+
+- 根因：全局规则资产列表会包含缺失文件，编辑器加载后默认选中排序后的第一个资产；当第一个资产缺失而后续存在可编辑文件时，右侧误显示“没有可编辑的文件”。
+- 结果：编辑器默认选择逻辑改为优先选择 `exists && isEditable` 的规则文件；当前选择在刷新后失效或变成不可编辑时，也回退到第一个真实可编辑文件。
+- 结果：Web 扫描模型和 Tauri 扫描模型都把缺失规则文件标记为 `isEditable: false`，与实际保存能力一致。
+- 结果：新增组件回归测试，覆盖 Claude 缺失、Codex 存在时应自动打开 Codex 内容的场景。
+- 通过：`npm test -- src/components/editor/editor-page.test.tsx src/lib/instructions/scan-codex-instructions.test.ts src/lib/instructions/scan-claude-instructions.test.ts src/lib/instructions/instructions-client.test.ts src/lib/instructions/save-instruction-asset.test.ts`
+- 通过：`npx tsc --noEmit`
+- 通过：`cargo check --manifest-path src-tauri/Cargo.toml`
+- 通过：`npm test`
+- 通过：`npm run build`
+- 通过：浏览器打开 `http://localhost:3001/instructions`，文件列表与编辑区正常加载，无控制台错误；本机 `3000` 已被其他进程占用，Next 自动使用 `3001` 做本轮验证。
+
 # 2026-06-23 macOS Intel 安装包架构兼容
 
 ## Spec
