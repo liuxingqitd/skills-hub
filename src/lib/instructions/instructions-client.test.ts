@@ -35,6 +35,34 @@ describe("instructions client", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/instructions", { cache: "no-store" });
   });
 
+  it("normalizes malformed instruction model payloads", async () => {
+    const fetchMock = vi.fn(async () => Response.json({
+      surfaces: [{ agent: "codex", assets: null }],
+      assets: [
+        {
+          id: "codex:AGENTS.md",
+          agent: "codex",
+          exists: true,
+          title: "~/.codex/AGENTS.md",
+        },
+      ],
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(loadInstructionsModel()).resolves.toEqual({
+      surfaces: [{ agent: "codex", assets: [] }],
+      assets: [
+        expect.objectContaining({
+          id: "codex:AGENTS.md",
+          exists: false,
+          contentPreview: null,
+          isEditable: false,
+          status: "missing",
+        }),
+      ],
+    });
+  });
+
   it("saves instructions through HTTP outside Tauri", async () => {
     const fetchMock = vi.fn(async () => Response.json({ ok: true }));
     vi.stubGlobal("fetch", fetchMock);

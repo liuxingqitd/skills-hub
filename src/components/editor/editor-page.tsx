@@ -3,8 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, FileText, LoaderCircle, Save } from "lucide-react";
 import Link from "next/link";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 
 import type { InstructionsPageModel } from "@/src/types/instructions";
 import type { InstructionPathSettings } from "@/src/lib/config/settings-store";
@@ -268,9 +266,9 @@ export function EditorPage() {
                   className="editor-body"
                   style={{ padding: 20, overflow: "auto" }}
                 >
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {draft || "_暂无内容_"}
-                  </ReactMarkdown>
+                  <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
+                    {draft || "暂无内容"}
+                  </pre>
                 </div>
               )}
               {saveError && (

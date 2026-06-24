@@ -1133,3 +1133,35 @@
 - 通过：`npx tsc --noEmit`
 - 通过：`npm run build`
 - 通过：`git diff --check`
+
+## 2026-06-24 全局规则白屏异常排查
+
+### Spec
+
+- 目标：定位用户打开全局规则页面出现 “Application error: a client-side exception has occurred while loading localhost” 的可能根因。
+- 已知现象：桌面应用窗口白屏，仅显示 Next/React 客户端异常兜底文案；用户场景来自 v0.1.5 安装包。
+- 排查范围：`/instructions` 页面客户端渲染、规则模型/路径 API、Tauri runtime 调用、缺失或异常规则文件、生产构建和测试覆盖。
+- 验证标准：能复现或用测试覆盖触发条件；修复后相关测试、类型检查和构建通过，并说明最可能原因。
+
+### Tasks
+
+- [x] 审查全局规则页面客户端渲染链路
+- [x] 审查 instructions client/API/Tauri 分支的异常处理
+- [x] 尝试复现生产构建下打开 `/instructions` 的异常
+- [x] 修复根因或增强防御性处理
+- [x] 运行相关测试、类型检查、构建和 diff 检查
+
+### Review
+
+- 最可能原因：用户使用 macOS 12 老 WebKit，`/instructions` 首屏静态引入 `react-markdown`/`remark-gfm` 后把 GFM 依赖中的 lookbehind 正则打进页面 chunk；老 WebKit 解析 chunk 时抛 SyntaxError，Next 显示全局 client-side exception 白屏。
+- 次要风险：用户环境里全局规则模型或渲染阶段出现异常数据/客户端异常，而 `/instructions` 没有局部错误边界，也会导致全局白屏。
+- 结果：移除全局规则页首屏 Markdown/GFM 静态依赖，预览分支改为纯文本 `<pre>`，避免老 WebKit 解析不兼容正则。
+- 结果：客户端加载 instructions 模型时会规整后端/Tauri payload；`exists: true` 但内容缺失等异常数据会被降级为缺失文件，不再进入 `.split()` 等渲染访问。
+- 结果：新增 `/instructions/error.tsx`，后续渲染异常会显示可重试的局部错误页。
+- 验证：桌面静态导出后 `/instructions` 首屏 JS 从约 47 kB 降到约 4 kB，页面 chunk 不再包含 `react-markdown`、`remark-gfm`、`micromark` 或 lookbehind 正则。
+- 通过：`npm test -- src/lib/instructions/instructions-client.test.ts src/components/editor/editor-page.test.tsx`
+- 通过：`npm test`
+- 通过：`npx tsc --noEmit`
+- 通过：`npm run build`
+- 通过：`npm run build:desktop-web`
+- 验证：启动 `npm run dev` 后，`http://localhost:3000/instructions` 和 `/api/instructions` 返回 200；浏览器渲染检查未出现全局 Application error。

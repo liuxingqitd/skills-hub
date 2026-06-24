@@ -1,4 +1,10 @@
-import type { InstructionsPageModel } from "@/src/types/instructions";
+import type {
+  InstructionAgent,
+  InstructionAsset,
+  InstructionKind,
+  InstructionScope,
+  InstructionsPageModel,
+} from "@/src/types/instructions";
 import { invokeTauri, isTauriRuntime } from "@/src/lib/desktop/tauri-runtime";
 import type { InstructionPathSettings } from "@/src/lib/config/settings-store";
 
@@ -22,13 +28,16 @@ export type SelectInstructionFileResult = {
 };
 
 export async function loadInstructionsModel(): Promise<InstructionsPageModel> {
+  let model: InstructionsPageModel;
   if (isTauriRuntime()) {
-    return invokeTauri<InstructionsPageModel>("get_instructions_model");
+    model = await invokeTauri<InstructionsPageModel>("get_instructions_model");
+    return normalizeInstructionsModel(model);
   }
 
   const res = await fetch("/api/instructions", { cache: "no-store" });
   if (!res.ok) throw new Error(`加载失败：${res.status}`);
-  return (await res.json()) as InstructionsPageModel;
+  model = (await res.json()) as InstructionsPageModel;
+  return normalizeInstructionsModel(model);
 }
 
 export async function saveInstructionAsset(
@@ -104,4 +113,57 @@ function commandErrorMessage(error: unknown, fallback: string) {
     if (typeof maybeError.message === "string") return maybeError.message;
   }
   return fallback;
+}
+
+function normalizeInstructionsModel(input: unknown): InstructionsPageModel {
+  if (!input || typeof input !== "object") {
+    return { surfaces: [], assets: [] };
+  }
+
+  const model = input as Partial<InstructionsPageModel>;
+  const surfaces = Array.isArray(model.surfaces)
+    ? model.surfaces.map((surface) => ({
+        ...surface,
+        assets: Array.isArray(surface.assets) ? surface.assets.map(normalizeAsset) : [],
+      }))
+    : [];
+
+  const assets = Array.isArray(model.assets) ? model.assets.map(normalizeAsset) : [];
+  return { surfaces, assets };
+}
+
+function normalizeAsset(asset: unknown): InstructionAsset {
+  const input = asset && typeof asset === "object"
+    ? asset as Record<string, unknown>
+    : {};
+  const contentPreview = typeof input.contentPreview === "string" ? input.contentPreview : null;
+  const exists = input.exists === true && contentPreview !== null;
+  const agent: InstructionAgent =
+    input.agent === "claude" || input.agent === "codex" || input.agent === "hermes"
+      ? input.agent
+      : "codex";
+  const kind: InstructionKind =
+    input.kind === "rule" || input.kind === "override" || input.kind === "nested"
+      ? input.kind
+      : "main";
+  const scope: InstructionScope = input.scope === "directory" ? "directory" : "user";
+
+  return {
+    id: typeof input.id === "string" ? input.id : "",
+    agent,
+    kind,
+    scope,
+    status: exists ? "found" : "missing",
+    path: typeof input.path === "string" ? input.path : "",
+    exists,
+    title: typeof input.title === "string" ? input.title : "规则文件",
+    description: typeof input.description === "string" ? input.description : "",
+    loadBehavior: typeof input.loadBehavior === "string" ? input.loadBehavior : "",
+    priority: typeof input.priority === "number" ? input.priority : 0,
+    parentPath: typeof input.parentPath === "string" ? input.parentPath : null,
+    contentPreview,
+    contentHash: typeof input.contentHash === "string" ? input.contentHash : null,
+    isEditable: input.isEditable === true && exists,
+    canCreate: input.canCreate === true,
+  };
 }
