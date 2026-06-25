@@ -18,10 +18,10 @@ export async function POST(request: Request) {
   }
   if (payload.instructionPaths && typeof payload.instructionPaths === "object") {
     patch.instructionPaths = {};
-    for (const agent of ["claude", "codex", "hermes"] as const) {
-      const value = payload.instructionPaths[agent];
-      if (typeof value === "string" && value.trim()) {
-        patch.instructionPaths[agent] = value.trim();
+    for (const [agent, value] of Object.entries(payload.instructionPaths)) {
+      const agentId = agent.trim();
+      if (agentId && typeof value === "string" && value.trim()) {
+        patch.instructionPaths[agentId] = value.trim();
       }
     }
   }

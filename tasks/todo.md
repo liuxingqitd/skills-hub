@@ -1,3 +1,41 @@
+# 2026-06-25 自定义 Agent 规则路径保存后仍缺失
+
+## Spec
+
+- 目标：修复自定义 agent（例如 OpenClaw）填写正确全局规则路径并保存后，仍显示“没有可编辑的文件”的问题。
+- 根因：Web `/api/settings` 保存规则路径时仍只保留 Claude / Codex / Hermes 三个 key，导致 `instructionPaths.openclaw` 被静默丢弃。
+- 范围：设置 API 保存逻辑、回归测试、必要验证。
+- 非目标：不改变全局规则编辑器布局，不扩大保存任意文件的权限边界。
+
+## Tasks
+
+- [x] 增加 settings API 保存自定义 agent instruction path 的回归测试
+- [x] 修复 `/api/settings` 对任意 agent id 的过滤逻辑
+- [x] 修复 Tauri settings 写入目录与错误吞掉问题
+- [x] 运行定向测试、类型检查和构建
+- [ ] 如验证通过，提交并推送修复
+
+## Verify
+
+- Web API 保存 `instructionPaths.openclaw` 时不再丢弃该 key。
+- 桌面端保存规则路径使用 app config 目录；写入失败会返回错误，不再让前端误以为保存成功。
+- 保存后重新加载模型能读到同一份 settings。
+
+## Review
+
+- 根因 1：`app/api/settings/route.ts` 的 POST 仍按旧逻辑只保留 Claude / Codex / Hermes，导致 Web 模式下 `openclaw` 路径被静默丢弃。
+- 根因 2：Tauri instructions settings 使用 `current_dir/config/settings.json` 并吞掉写入错误；打包客户端中可能返回“保存成功”，但下一次读取模型时仍读不到路径。
+- 结果：Web settings API 改为保留任意非空 agent id。
+- 结果：Tauri settings 读写改为复用应用配置目录 helper，并在写失败时返回错误。
+- 结果：版本升到 `0.1.8`，需要重新发布客户端。
+- 通过：`npm test`（86 tests）
+- 通过：`npx tsc --noEmit`
+- 通过：`npm run build`
+- 通过：`npm run build:desktop-web`
+- 通过：`cargo fmt --manifest-path src-tauri/Cargo.toml --check`
+- 通过：`git diff --check`
+- 限制：本机 `cargo test/check` 被 crates.io registry/cache 对 `crypto-common 0.1.8` 的解析问题阻断；这不是本次代码改动导致，上一版 CI 在干净环境已成功解析同一依赖锁，本轮以 GitHub Action 作为最终 Rust/desktop 验证。
+
 # 2026-06-25 自定义 Agent 全局规则路径
 
 ## Spec

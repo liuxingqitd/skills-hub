@@ -1,6 +1,6 @@
 [package]
 name = "skills-hub"
-version = "0.1.7"
+version = "0.1.8"
 description = "Local AI agent skills manager"
 authors = ["Skills Hub Contributors"]
 edition = "2021"

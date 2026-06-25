@@ -1206,7 +1206,7 @@ fn read_sync_mode(app: &tauri::AppHandle) -> String {
         .unwrap_or_else(|| "copy".to_string())
 }
 
-fn read_config_string(app: &tauri::AppHandle, filename: &str) -> Option<String> {
+pub(crate) fn read_config_string(app: &tauri::AppHandle, filename: &str) -> Option<String> {
     let dev_path = env::current_dir()
         .ok()
         .map(|cwd| cwd.join("config").join(filename))
@@ -1222,7 +1222,10 @@ fn read_config_string(app: &tauri::AppHandle, filename: &str) -> Option<String> 
         .and_then(|path| fs::read_to_string(path).ok())
 }
 
-fn writable_config_path(app: &tauri::AppHandle, filename: &str) -> Result<PathBuf, String> {
+pub(crate) fn writable_config_path(
+    app: &tauri::AppHandle,
+    filename: &str,
+) -> Result<PathBuf, String> {
     let dev_dir = env::current_dir()
         .map(|cwd| cwd.join("config"))
         .ok()

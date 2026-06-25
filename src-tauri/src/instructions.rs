@@ -128,7 +128,7 @@ fn default_sync_mode() -> String {
 
 #[tauri::command]
 pub fn get_instructions_model(app: tauri::AppHandle) -> InstructionsPageModel {
-    let settings = read_settings();
+    let settings = read_settings(&app);
     let agents = crate::agents::get_agents(app);
     let surfaces = instruction_configs(&settings.instruction_paths, &agents)
         .iter()
@@ -152,9 +152,10 @@ pub fn get_instructions_model(app: tauri::AppHandle) -> InstructionsPageModel {
 
 #[tauri::command]
 pub fn update_instruction_asset(
+    app: tauri::AppHandle,
     input: UpdateInstructionInput,
 ) -> Result<UpdateInstructionResult, InstructionCommandError> {
-    let settings = read_settings();
+    let settings = read_settings(&app);
     let (target_path, root_path) = resolve_update_target(&input.path, &settings.instruction_paths)?;
     let current_content = fs::read_to_string(&target_path).map_err(|_| {
         InstructionCommandError::new("NOT_FOUND", "目标文件不存在，请重新加载后再试。")
@@ -182,16 +183,19 @@ pub fn update_instruction_asset(
 }
 
 #[tauri::command]
-pub fn get_instruction_paths() -> HashMap<String, String> {
-    read_settings().instruction_paths
+pub fn get_instruction_paths(app: tauri::AppHandle) -> HashMap<String, String> {
+    read_settings(&app).instruction_paths
 }
 
 #[tauri::command]
-pub fn set_instruction_paths(input: SetInstructionPathsInput) -> HashMap<String, String> {
-    let mut settings = read_settings();
+pub fn set_instruction_paths(
+    app: tauri::AppHandle,
+    input: SetInstructionPathsInput,
+) -> Result<HashMap<String, String>, String> {
+    let mut settings = read_settings(&app);
     settings.instruction_paths = normalize_instruction_paths(&input.instruction_paths);
-    write_settings(&settings);
-    settings.instruction_paths
+    write_settings(&app, &settings)?;
+    Ok(settings.instruction_paths)
 }
 
 #[tauri::command]
@@ -460,16 +464,8 @@ fn is_inside(root: &Path, candidate: &Path) -> bool {
     candidate == root || candidate.starts_with(root)
 }
 
-fn settings_path() -> PathBuf {
-    env::current_dir()
-        .unwrap_or_else(|_| PathBuf::from("."))
-        .join("config")
-        .join("settings.json")
-}
-
-fn read_settings() -> AppSettings {
-    fs::read_to_string(settings_path())
-        .ok()
+fn read_settings(app: &tauri::AppHandle) -> AppSettings {
+    crate::agents::read_config_string(app, "settings.json")
         .and_then(|content| serde_json::from_str::<AppSettings>(&content).ok())
         .map(|mut settings| {
             settings.instruction_paths = normalize_instruction_paths(&settings.instruction_paths);
@@ -478,14 +474,14 @@ fn read_settings() -> AppSettings {
         .unwrap_or_default()
 }
 
-fn write_settings(settings: &AppSettings) {
-    let path = settings_path();
+fn write_settings(app: &tauri::AppHandle, settings: &AppSettings) -> Result<(), String> {
+    let path = crate::agents::writable_config_path(app, "settings.json")?;
     if let Some(parent) = path.parent() {
-        let _ = fs::create_dir_all(parent);
+        fs::create_dir_all(parent).map_err(|error| format!("创建配置目录失败: {error}"))?;
     }
-    if let Ok(content) = serde_json::to_string_pretty(settings) {
-        let _ = fs::write(path, format!("{content}\n"));
-    }
+    let content = serde_json::to_string_pretty(settings)
+        .map_err(|error| format!("序列化设置失败: {error}"))?;
+    fs::write(path, format!("{content}\n")).map_err(|error| format!("保存设置失败: {error}"))
 }
 
 fn normalize_instruction_paths(paths: &HashMap<String, String>) -> HashMap<String, String> {
