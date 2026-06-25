@@ -138,10 +138,9 @@ function normalizeAsset(asset: unknown): InstructionAsset {
     : {};
   const contentPreview = typeof input.contentPreview === "string" ? input.contentPreview : null;
   const exists = input.exists === true && contentPreview !== null;
-  const agent: InstructionAgent =
-    input.agent === "claude" || input.agent === "codex" || input.agent === "hermes"
-      ? input.agent
-      : "codex";
+  const agent: InstructionAgent = typeof input.agent === "string" && input.agent
+    ? input.agent
+    : "codex";
   const kind: InstructionKind =
     input.kind === "rule" || input.kind === "override" || input.kind === "nested"
       ? input.kind

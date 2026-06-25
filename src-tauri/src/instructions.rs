@@ -7,6 +7,8 @@ use std::{
     process::Command,
 };
 
+use crate::agents::AgentDefinition;
+
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 struct InstructionAsset {
@@ -91,7 +93,7 @@ pub struct UpdateInstructionResult {
     exists: bool,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InstructionCommandError {
     ok: bool,
@@ -110,13 +112,14 @@ impl InstructionCommandError {
 }
 
 struct AgentInstructionConfig {
-    agent: &'static str,
+    agent: String,
     root_dir: PathBuf,
     main_file_name: String,
-    id: &'static str,
-    title: &'static str,
-    description: &'static str,
-    load_behavior: &'static str,
+    id: String,
+    title: String,
+    description: String,
+    load_behavior: String,
+    has_path: bool,
 }
 
 fn default_sync_mode() -> String {
@@ -124,9 +127,10 @@ fn default_sync_mode() -> String {
 }
 
 #[tauri::command]
-pub fn get_instructions_model() -> InstructionsPageModel {
+pub fn get_instructions_model(app: tauri::AppHandle) -> InstructionsPageModel {
     let settings = read_settings();
-    let surfaces = instruction_configs(&settings.instruction_paths)
+    let agents = crate::agents::get_agents(app);
+    let surfaces = instruction_configs(&settings.instruction_paths, &agents)
         .iter()
         .map(scan_agent_instructions)
         .collect::<Vec<_>>();
@@ -200,23 +204,31 @@ pub fn select_instruction_file() -> Result<SelectInstructionFileResult, String> 
 }
 
 fn scan_agent_instructions(config: &AgentInstructionConfig) -> InstructionSurface {
-    let root_file = config.root_dir.join(&config.main_file_name);
-    let root_content = fs::read_to_string(&root_file).ok();
+    let root_file = if config.has_path {
+        config.root_dir.join(&config.main_file_name)
+    } else {
+        PathBuf::new()
+    };
+    let root_content = if config.has_path {
+        fs::read_to_string(&root_file).ok()
+    } else {
+        None
+    };
     let exists = root_content.is_some();
     let content_hash = root_content
         .as_ref()
         .map(|content| hash_instruction_content(content));
     let asset = InstructionAsset {
-        id: config.id.to_string(),
-        agent: config.agent.to_string(),
+        id: config.id.clone(),
+        agent: config.agent.clone(),
         kind: "main".to_string(),
         scope: "user".to_string(),
         status: if exists { "found" } else { "missing" }.to_string(),
         path: root_file.to_string_lossy().into_owned(),
         exists,
-        title: config.title.to_string(),
-        description: config.description.to_string(),
-        load_behavior: config.load_behavior.to_string(),
+        title: config.title.clone(),
+        description: config.description.clone(),
+        load_behavior: config.load_behavior.clone(),
         priority: 0,
         parent_path: None,
         content_preview: root_content,
@@ -226,8 +238,12 @@ fn scan_agent_instructions(config: &AgentInstructionConfig) -> InstructionSurfac
     };
 
     InstructionSurface {
-        agent: config.agent.to_string(),
-        root_path: config.root_dir.to_string_lossy().into_owned(),
+        agent: config.agent.clone(),
+        root_path: if config.has_path {
+            config.root_dir.to_string_lossy().into_owned()
+        } else {
+            String::new()
+        },
         summary: InstructionSummary {
             main_files: if asset.exists { 1 } else { 0 },
             rule_files: 0,
@@ -238,7 +254,10 @@ fn scan_agent_instructions(config: &AgentInstructionConfig) -> InstructionSurfac
     }
 }
 
-fn instruction_configs(overrides: &HashMap<String, String>) -> Vec<AgentInstructionConfig> {
+fn instruction_configs(
+    overrides: &HashMap<String, String>,
+    agents: &[AgentDefinition],
+) -> Vec<AgentInstructionConfig> {
     let home = home_dir();
     let claude_root = home.join(".claude");
     let codex_root = env::var_os("CODEX_HOME")
@@ -264,36 +283,88 @@ fn instruction_configs(overrides: &HashMap<String, String>) -> Vec<AgentInstruct
     let codex_path = override_path(overrides, "codex").unwrap_or(default_codex_path);
     let hermes_path = override_path(overrides, "hermes").unwrap_or(default_hermes_path);
 
-    vec![
+    let mut configs = vec![
         AgentInstructionConfig {
-            agent: "claude",
+            agent: "claude".to_string(),
             root_dir: parent_or_home(&claude_path),
             main_file_name: file_name_or_default(&claude_path, "CLAUDE.md"),
-            id: "claude:CLAUDE.md",
-            title: "~/.claude/CLAUDE.md",
-            description: "Claude Code 的用户级全局指令文件。",
+            id: "claude:CLAUDE.md".to_string(),
+            title: "~/.claude/CLAUDE.md".to_string(),
+            description: "Claude Code 的用户级全局指令文件。".to_string(),
             load_behavior:
-                "对这台机器上的所有 Claude Code 项目生效，适合放个人级偏好和长期工作流。",
+                "对这台机器上的所有 Claude Code 项目生效，适合放个人级偏好和长期工作流。"
+                    .to_string(),
+            has_path: true,
         },
         AgentInstructionConfig {
-            agent: "codex",
+            agent: "codex".to_string(),
             root_dir: parent_or_home(&codex_path),
             main_file_name: file_name_or_default(&codex_path, "AGENTS.md"),
-            id: "codex:AGENTS.md",
-            title: "~/.codex/AGENTS.md",
-            description: "Codex 的全局 AGENTS 指令文件。",
-            load_behavior: "作为 Codex 的用户级基础说明，对本机上的 Codex 工作区提供默认行为约束。",
+            id: "codex:AGENTS.md".to_string(),
+            title: "~/.codex/AGENTS.md".to_string(),
+            description: "Codex 的全局 AGENTS 指令文件。".to_string(),
+            load_behavior: "作为 Codex 的用户级基础说明，对本机上的 Codex 工作区提供默认行为约束。"
+                .to_string(),
+            has_path: true,
         },
         AgentInstructionConfig {
-            agent: "hermes",
+            agent: "hermes".to_string(),
             root_dir: parent_or_home(&hermes_path),
             main_file_name: file_name_or_default(&hermes_path, "AGENTS.md"),
-            id: "hermes:AGENTS.md",
-            title: "~/.hermes/AGENTS.md",
-            description: "Hermes Agent 的用户级全局指令文件。",
-            load_behavior: "作为 Hermes 的用户级基础说明，对所有 Hermes 工作区提供默认行为约束。",
+            id: "hermes:AGENTS.md".to_string(),
+            title: "~/.hermes/AGENTS.md".to_string(),
+            description: "Hermes Agent 的用户级全局指令文件。".to_string(),
+            load_behavior: "作为 Hermes 的用户级基础说明，对所有 Hermes 工作区提供默认行为约束。"
+                .to_string(),
+            has_path: true,
         },
-    ]
+    ];
+
+    let mut dynamic_ids = agents
+        .iter()
+        .filter(|agent| agent.enabled)
+        .map(|agent| (agent.id.clone(), agent.name.clone()))
+        .collect::<HashMap<_, _>>();
+    for agent_id in overrides.keys() {
+        dynamic_ids
+            .entry(agent_id.clone())
+            .or_insert_with(|| agent_id.clone());
+    }
+
+    for (agent_id, agent_name) in dynamic_ids {
+        if matches!(agent_id.as_str(), "claude" | "codex" | "hermes") {
+            continue;
+        }
+
+        if let Some(path) = override_path(overrides, &agent_id) {
+            configs.push(AgentInstructionConfig {
+                agent: agent_id.clone(),
+                root_dir: parent_or_home(&path),
+                main_file_name: file_name_or_default(&path, "AGENTS.md"),
+                id: format!("{agent_id}:{}", file_name_or_default(&path, "AGENTS.md")),
+                title: format!("{agent_name} 全局规则"),
+                description: format!("{agent_name} 的用户级全局规则文件。"),
+                load_behavior: "使用你手动配置的路径，对该 agent 的本机工作区提供默认行为约束。"
+                    .to_string(),
+                has_path: true,
+            });
+        } else {
+            configs.push(AgentInstructionConfig {
+                agent: agent_id.clone(),
+                root_dir: PathBuf::new(),
+                main_file_name: String::new(),
+                id: format!("{agent_id}:configured"),
+                title: format!("{agent_name} 全局规则"),
+                description: format!("{agent_name} 的用户级全局规则文件。"),
+                load_behavior:
+                    "选择一个 Markdown 文件后，Skills Hub 会把它作为该 agent 的全局规则入口。"
+                        .to_string(),
+                has_path: false,
+            });
+        }
+    }
+
+    configs
 }
 
 fn resolve_update_target(
@@ -308,7 +379,10 @@ fn resolve_update_target(
         ));
     }
 
-    for config in instruction_configs(overrides) {
+    for config in instruction_configs(overrides, &[]) {
+        if !config.has_path {
+            continue;
+        }
         let target = config.root_dir.join(config.main_file_name);
         if normalize_path(&requested) == normalize_path(&target) {
             return Ok((target, config.root_dir));
@@ -416,12 +490,10 @@ fn write_settings(settings: &AppSettings) {
 
 fn normalize_instruction_paths(paths: &HashMap<String, String>) -> HashMap<String, String> {
     let mut normalized = HashMap::new();
-    for agent in ["claude", "codex", "hermes"] {
-        if let Some(path) = paths
-            .get(agent)
-            .map(|value| value.trim())
-            .filter(|value| !value.is_empty())
-        {
+    for (agent, path) in paths {
+        let agent = agent.trim();
+        let path = path.trim();
+        if !agent.is_empty() && !path.is_empty() {
             normalized.insert(agent.to_string(), path.to_string());
         }
     }
@@ -513,7 +585,11 @@ fn home_dir() -> PathBuf {
 
 #[cfg(test)]
 mod tests {
-    use super::hash_instruction_content;
+    use super::{
+        hash_instruction_content, instruction_configs, normalize_instruction_paths,
+        resolve_update_target,
+    };
+    use std::collections::HashMap;
 
     #[test]
     fn hash_normalizes_bom_and_crlf() {
@@ -521,5 +597,61 @@ mod tests {
             hash_instruction_content("hello\nworld\n"),
             hash_instruction_content("\u{feff}hello\r\nworld\r\n")
         );
+    }
+
+    #[test]
+    fn normalize_instruction_paths_preserves_custom_agents() {
+        let input = HashMap::from([
+            (
+                " openclaw ".to_string(),
+                " /tmp/openclaw/AGENTS.md ".to_string(),
+            ),
+            ("codex".to_string(), "/tmp/codex/AGENTS.md".to_string()),
+            ("empty".to_string(), " ".to_string()),
+        ]);
+
+        let normalized = normalize_instruction_paths(&input);
+
+        assert_eq!(
+            normalized.get("openclaw"),
+            Some(&"/tmp/openclaw/AGENTS.md".to_string())
+        );
+        assert_eq!(
+            normalized.get("codex"),
+            Some(&"/tmp/codex/AGENTS.md".to_string())
+        );
+        assert!(!normalized.contains_key("empty"));
+    }
+
+    #[test]
+    fn instruction_configs_include_custom_agent_path() {
+        let input = HashMap::from([(
+            "openclaw".to_string(),
+            "/tmp/openclaw/OpenClaw.md".to_string(),
+        )]);
+
+        let configs = instruction_configs(&input, &[]);
+        let custom = configs
+            .iter()
+            .find(|config| config.agent == "openclaw")
+            .expect("custom config");
+
+        assert!(custom.has_path);
+        assert_eq!(custom.main_file_name, "OpenClaw.md");
+        assert_eq!(custom.title, "openclaw 全局规则");
+    }
+
+    #[test]
+    fn resolve_update_target_accepts_configured_custom_agent_path() {
+        let input = HashMap::from([(
+            "openclaw".to_string(),
+            "/tmp/openclaw/OpenClaw.md".to_string(),
+        )]);
+
+        let (path, root) =
+            resolve_update_target("/tmp/openclaw/OpenClaw.md", &input).expect("target");
+
+        assert_eq!(path.to_string_lossy(), "/tmp/openclaw/OpenClaw.md");
+        assert_eq!(root.to_string_lossy(), "/tmp/openclaw");
     }
 }

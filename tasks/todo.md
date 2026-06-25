@@ -1,3 +1,50 @@
+# 2026-06-25 自定义 Agent 全局规则路径
+
+## Spec
+
+- 目标：全局规则编辑器支持为任意已配置 agent 新增/编辑规则文件路径，例如用户安装 OpenClaw 后可以添加 OpenClaw agent，再为它选择 OpenClaw 的全局规则文件。
+- 范围：规则路径设置的数据结构、Web 扫描/保存校验、编辑器路径选择交互、Tauri 桌面端同等扫描/保存能力、版本号和 release 触发。
+- 非目标：不猜测所有第三方 agent 的默认规则文件；非 Claude/Codex/Hermes 的规则文件必须由用户手动配置路径。
+- 设计方向：保留 Claude/Codex/Hermes 的默认规则路径和现有扫描逻辑；对其他 enabled agent，如果 `instructionPaths[agentId]` 存在，则生成一个可编辑/缺失的主规则资产。保存接口只允许写当前解析出的规则路径。
+
+## Tasks
+
+- [x] 补充自定义 agent 全局规则路径的回归测试
+- [x] 放宽规则路径设置和规则资产类型，支持任意 agent id
+- [x] 让 Web 指令模型扫描 enabled agent 的自定义规则路径
+- [x] 让保存逻辑允许写入已配置的自定义 agent 规则文件
+- [x] 让 Tauri 指令模型和保存逻辑保持同等行为
+- [x] 更新版本号并准备触发客户端 release
+- [x] 运行测试、类型检查、构建和必要桌面端检查
+- [ ] 提交、推送远端并推送 tag 触发 GitHub Action
+- [ ] 记录 Review / 复盘
+
+## Verify
+
+- OpenClaw 这类自定义 agent 配置规则路径后，会出现在全局规则编辑器中。
+- 自定义 agent 的规则文件存在时可编辑保存；不存在时显示缺失并允许用户改路径。
+- 未配置规则路径的自定义 agent 不会凭空出现规则文件。
+- Claude/Codex/Hermes 的默认行为不回退。
+- Web 与 Tauri 桌面静态包行为一致。
+
+## Review
+
+- 结果：全局规则路径设置改为保留任意 agent id，`openclaw` 这类自定义 key 不再被 Web 或 Tauri 侧丢弃。
+- 结果：全局规则模型会基于 enabled agent 生成条目；Claude / Codex / Hermes 保留默认路径，其他 agent 在未配置规则路径时显示占位条目，用户可直接选择文件应用路径。
+- 结果：保存白名单支持已配置的自定义 agent 规则文件，仍要求路径完全匹配、文件存在且不是 symlink。
+- 结果：OpenClaw 已加入内置 agent registry，默认禁用，用户可在设置页启用并调整 skills 路径。
+- 结果：版本升到 `0.1.7`，用于推送 tag 触发桌面客户端 GitHub Action。
+- 通过：`npm test`（85 tests）
+- 通过：`npx tsc --noEmit`
+- 通过：`npm run build`
+- 通过：`npm run build:desktop-web`
+- 通过：`cargo test --manifest-path src-tauri/Cargo.toml`
+- 通过：`cargo check --manifest-path src-tauri/Cargo.toml`
+- 通过：`cargo fmt --manifest-path src-tauri/Cargo.toml --check`
+- 通过：`git diff --check`
+- 通过：本地 dev server `http://localhost:3000/instructions` 返回 200，`/api/agents` 返回 OpenClaw registry 条目。
+- 限制：`npm run lint` 调用 deprecated `next lint`，因项目没有 ESLint 配置而进入交互式初始化并退出，未执行实际 lint 规则。
+
 # 2026-06-23 全局规则自定义文件路径
 
 ## Spec

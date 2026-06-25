@@ -2,7 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 export type SyncMode = "copy" | "symlink";
-export type InstructionAgentId = "claude" | "codex" | "hermes";
+export type InstructionAgentId = string;
 
 export type InstructionPathSettings = Partial<Record<InstructionAgentId, string>>;
 
@@ -46,12 +46,13 @@ export async function writeSettings(settings: AppSettings): Promise<void> {
 function normalizeInstructionPaths(paths: unknown): InstructionPathSettings {
   if (!paths || typeof paths !== "object") return {};
 
-  const input = paths as Partial<Record<InstructionAgentId, unknown>>;
+  const input = paths as Record<string, unknown>;
   const normalized: InstructionPathSettings = {};
-  for (const agent of ["claude", "codex", "hermes"] as const) {
-    const value = input[agent];
+  for (const [agent, value] of Object.entries(input)) {
+    const normalizedAgent = agent.trim();
+    if (!normalizedAgent) continue;
     if (typeof value === "string" && value.trim()) {
-      normalized[agent] = value.trim();
+      normalized[normalizedAgent] = value.trim();
     }
   }
   return normalized;

@@ -51,4 +51,27 @@ describe("settings-store", () => {
     expect(settings.syncMode).toBe("symlink");
     expect(settings.instructionPaths.codex).toBe("/tmp/custom/AGENTS.md");
   });
+
+  it("preserves custom agent instruction paths", async () => {
+    const raw = await readRawSettings();
+    if (raw) originalContent = JSON.stringify(raw);
+    else originalContent = null;
+
+    const { readSettings, writeSettings } = await import("@/src/lib/config/settings-store");
+
+    await writeSettings({
+      syncMode: "copy",
+      instructionPaths: {
+        " openclaw ": " /tmp/openclaw/AGENTS.md ",
+        codex: "/tmp/codex/AGENTS.md",
+        empty: " ",
+      },
+    });
+
+    const settings = await readSettings();
+    expect(settings.instructionPaths).toEqual({
+      openclaw: "/tmp/openclaw/AGENTS.md",
+      codex: "/tmp/codex/AGENTS.md",
+    });
+  });
 });

@@ -8,6 +8,7 @@ export type InstructionPathConfig = {
   claudePath: string;
   codexPath: string;
   hermesPath: string;
+  pathsByAgent: Record<string, string>;
 };
 
 type RootOptions = {
@@ -25,10 +26,16 @@ export function defaultInstructionPaths(options: RootOptions = {}): InstructionP
       ? join(process.env.LOCALAPPDATA, "hermes")
       : join(homedir(), ".hermes"));
 
+  const claudePath = join(claudeRootDir, "CLAUDE.md");
+  const codexPath = join(codexRootDir, "AGENTS.md");
+  const hermesPath = join(hermesRootDir, "AGENTS.md");
+  const pathsByAgent = { claude: claudePath, codex: codexPath, hermes: hermesPath };
+
   return {
-    claudePath: join(claudeRootDir, "CLAUDE.md"),
-    codexPath: join(codexRootDir, "AGENTS.md"),
-    hermesPath: join(hermesRootDir, "AGENTS.md"),
+    claudePath,
+    codexPath,
+    hermesPath,
+    pathsByAgent,
   };
 }
 
@@ -37,10 +44,19 @@ export function resolveInstructionPaths(
   options: RootOptions = {}
 ): InstructionPathConfig {
   const defaults = defaultInstructionPaths(options);
+  const pathsByAgent = {
+    ...defaults.pathsByAgent,
+    ...overrides,
+    claude: overrides.claude || defaults.claudePath,
+    codex: overrides.codex || defaults.codexPath,
+    hermes: overrides.hermes || defaults.hermesPath,
+  };
+
   return {
     claudePath: overrides.claude || defaults.claudePath,
     codexPath: overrides.codex || defaults.codexPath,
     hermesPath: overrides.hermes || defaults.hermesPath,
+    pathsByAgent,
   };
 }
 
@@ -55,13 +71,14 @@ export function fileNameForInstructionPath(path: string) {
 export function pathForAgent(paths: InstructionPathConfig, agent: InstructionAgent) {
   if (agent === "claude") return paths.claudePath;
   if (agent === "codex") return paths.codexPath;
-  return paths.hermesPath;
+  if (agent === "hermes") return paths.hermesPath;
+  return paths.pathsByAgent[agent];
 }
 
 export function agentForPath(paths: InstructionPathConfig, path: string): InstructionAgent | null {
   const resolvedPath = resolve(path);
-  if (resolvedPath === resolve(paths.claudePath)) return "claude";
-  if (resolvedPath === resolve(paths.codexPath)) return "codex";
-  if (resolvedPath === resolve(paths.hermesPath)) return "hermes";
+  for (const [agent, agentPath] of Object.entries(paths.pathsByAgent)) {
+    if (resolvedPath === resolve(agentPath)) return agent;
+  }
   return null;
 }

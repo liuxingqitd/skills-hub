@@ -54,5 +54,12 @@
     "skillsPath": "$HOME/.opencode/skills",
     "description": "开源终端 AI 编程助手，支持多模型、多供应商的灵活编码体验",
     "homepage": "https://opencode.ai"
+  },
+  {
+    "id": "openclaw",
+    "name": "OpenClaw",
+    "skillsPath": "$HOME/.openclaw/skills",
+    "description": "开源自主 AI agent，支持本地技能扩展和自动化工作流",
+    "homepage": "https://openclaw.ai/"
   }
 ]

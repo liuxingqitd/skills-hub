@@ -100,17 +100,11 @@ function resolveUpdateTarget(path: string, options: ReturnType<typeof getRoots>)
   const paths = resolveInstructionPaths(options.instructionPaths, options);
   const agent = agentForPath(paths, path);
 
-  if (agent === "claude") {
-    const targetPath = paths.claudePath;
-    return { path: targetPath, rootPath: dirname(targetPath) };
-  }
-  if (agent === "codex") {
-    const targetPath = paths.codexPath;
-    return { path: targetPath, rootPath: dirname(targetPath) };
-  }
-  if (agent === "hermes") {
-    const targetPath = paths.hermesPath;
-    return { path: targetPath, rootPath: dirname(targetPath) };
+  if (agent) {
+    const targetPath = paths.pathsByAgent[agent];
+    if (targetPath) {
+      return { path: targetPath, rootPath: dirname(targetPath) };
+    }
   }
 
   throw new SaveInstructionError("INVALID_PATH", "目标路径不在允许更新的全局规则范围内。");

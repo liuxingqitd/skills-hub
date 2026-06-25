@@ -89,6 +89,30 @@ describe("instruction writes", () => {
     expect(result.contentHash).toBe(hashInstructionContent("# New"));
   });
 
+  it("updates a configured custom agent instruction file", async () => {
+    const { claudeRootDir, codexRootDir } = await createRoots();
+    const root = await mkdtemp(join(tmpdir(), "openclaw-instruction-"));
+    tempDirs.push(root);
+    const targetPath = join(root, "OpenClaw.md");
+    await writeFile(targetPath, "# Old", "utf8");
+
+    const result = await updateInstructionAsset(
+      {
+        path: targetPath,
+        content: "# New",
+        previousHash: hashInstructionContent("# Old")
+      },
+      {
+        claudeRootDir,
+        codexRootDir,
+        instructionPaths: { openclaw: targetPath },
+      }
+    );
+
+    expect(result.path).toBe(targetPath);
+    expect(result.contentHash).toBe(hashInstructionContent("# New"));
+  });
+
   it("rejects the default Codex file after a custom path is configured", async () => {
     const { claudeRootDir, codexRootDir } = await createRoots();
     const defaultPath = join(codexRootDir, "AGENTS.md");

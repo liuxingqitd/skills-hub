@@ -11,12 +11,12 @@ use tauri::Manager;
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentDefinition {
-    id: String,
-    name: String,
+    pub(crate) id: String,
+    pub(crate) name: String,
     skills_path: String,
     description: String,
     homepage: String,
-    enabled: bool,
+    pub(crate) enabled: bool,
     #[serde(default)]
     builtin: bool,
 }
