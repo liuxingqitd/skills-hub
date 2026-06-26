@@ -1,6 +1,8 @@
 {
   "name": "skills-hub",
   "version": "0.1.9",
+  "homepage": "https://github.com/liuxingqitd/skills-hub",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "next dev",
