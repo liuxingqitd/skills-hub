@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 GitHub Discussions
+    url: https://github.com/liuxingqitd/skills-hub/discussions
+    about: Ask questions, share ideas, or show what you built with Skills Hub
+  - name: 🚀 Feature Request
+    url: https://github.com/liuxingqitd/skills-hub/discussions/categories/feature-requests
+    about: Suggest a new feature or improvement (preferred for non-bug suggestions)
