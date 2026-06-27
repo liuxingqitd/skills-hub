@@ -3,10 +3,6 @@
 本地 AI agent skills 管理工作台，一站式管理多个 AI coding agent 的技能（skills）。支持哪些 agent 完全由后台配置，随时增删。
 
 <p align="center">
-  <img src="screenshots/dashboard.png" alt="Skills Hub 仪表盘" width="800" />
-</p>
-
-<p align="center">
   <a href="README.md">English</a>
   •
   <a href="https://skills-hub.dev">🌐 官网</a>

@@ -1,10 +1,3 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="screenshots/dashboard.png">
-    <img src="screenshots/dashboard.png" alt="Skills Hub Dashboard" width="800" />
-  </picture>
-</p>
-
 <h1 align="center">Skills Hub</h1>
 
 <p align="center">
