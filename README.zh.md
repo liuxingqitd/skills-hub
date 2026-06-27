@@ -8,6 +8,8 @@
 
 <p align="center">
   <a href="README.md">English</a>
+  •
+  <a href="https://skills-hub.dev">🌐 官网</a>
 </p>
 
 <p align="center">
@@ -57,6 +59,10 @@ Skills Hub **不做数据库，不做云端存储**。它直接读取你本机�
 | **孤立副本** | 已安装但源 skill 已删除 |
 
 同步操作就是在这个状态模型上进行的：缺失/漂移的 → 复制修复，冲突的 → 跳过，孤立的 → 可选择清理。
+
+## 官网
+
+访问 **[skills-hub.dev](https://skills-hub.dev)** —— Skills Hub 产品官网，包含功能介绍、展示等。
 
 ## 快速开始
 

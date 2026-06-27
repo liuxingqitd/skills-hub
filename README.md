@@ -15,6 +15,8 @@
 
 <p align="center">
   <a href="README.zh.md">中文版</a>
+  •
+  <a href="https://skills-hub.dev">🌐 Website</a>
 </p>
 
 <p align="center">
@@ -67,6 +69,10 @@ Skills Hub has **no database, no cloud storage**. It directly reads your local a
 | **Orphaned** | Installed but source skill was deleted |
 
 Sync resolves these: missing/drifted → copy fix, collisions → skip, orphans → optionally clean up.
+
+## Website
+
+Visit **[skills-hub.dev](https://skills-hub.dev)** — the official product website featuring showcases, documentation, and more.
 
 ## Quick Start
 
