@@ -8,7 +8,6 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Activity,
   ArrowUp,
   ChevronRight,
   Grid3X3,
@@ -55,28 +54,6 @@ const Icons = {
   grid: <Grid3X3 size={16} />,
   list: <List size={16} />,
 };
-
-type Translate = ReturnType<typeof useI18n>["t"];
-
-function formatUsageMeta(row: SkillBoardRow, t: Translate): string {
-  if (row.usage.totalCount === 0) return t("dashboard.usage.none");
-  return t("dashboard.usage.meta", { total: row.usage.totalCount, count30d: row.usage.count30d });
-}
-
-function formatLastUsed(lastUsedAt: string | null, t: Translate): string {
-  if (!lastUsedAt) return t("dashboard.usage.never");
-  const last = Date.parse(lastUsedAt);
-  if (!Number.isFinite(last)) return t("common.unknownTime");
-  const diffDays = Math.floor((Date.now() - last) / (24 * 60 * 60 * 1000));
-  if (diffDays <= 0) return t("common.today");
-  if (diffDays === 1) return t("common.yesterday");
-  if (diffDays < 30) return t("common.daysAgo", { count: diffDays });
-  return new Intl.DateTimeFormat(t("locale.date"), {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date(last));
-}
 
 export function DashboardPage({ model }: { model: SkillBoardModel }) {
   const router = useRouter();
@@ -753,36 +730,6 @@ function SkillDetailDrawer({
           </div>
         </div>
 
-        {/* Usage */}
-        <div className="detail-card">
-          <div className="detail-card-label">{t("dashboard.usage.titleLabel")}</div>
-          <div className="usage-detail-grid">
-            <div>
-              <div className="usage-detail-value">{skill.usage.totalCount}</div>
-              <div className="usage-detail-label">{t("dashboard.usage.total")}</div>
-            </div>
-            <div>
-              <div className="usage-detail-value">{skill.usage.count30d}</div>
-              <div className="usage-detail-label">30d</div>
-            </div>
-            <div>
-              <div className="usage-detail-value">{formatLastUsed(skill.usage.lastUsedAt, t)}</div>
-              <div className="usage-detail-label">{t("dashboard.usage.lastUsed")}</div>
-            </div>
-          </div>
-          {Object.keys(skill.usage.byAgent).length > 0 && (
-            <div className="usage-agent-list">
-              {Object.entries(skill.usage.byAgent)
-                .sort((left, right) => right[1] - left[1])
-                .map(([agentId, count]) => (
-                  <span key={agentId} className="usage-agent-pill">
-                    {agentId} {count}
-                  </span>
-                ))}
-            </div>
-          )}
-        </div>
-
         {/* Source */}
         <div className="detail-card">
           <div className="detail-card-label">{t("dashboard.sourceFile")}</div>
@@ -985,16 +932,10 @@ function SkillCard({
         </div>
       </div>
       <div className="skill-card-footer">
-        <div className="skill-card-footer-main">
-          <div className="skill-card-agents">
-            {row.cells.map((cell) => (
-              <AgentIcon key={cell.agentId} agentId={cell.agentId} status={cell.displayStatus} size={18} />
-            ))}
-          </div>
-          <div className="skill-usage-meta" title={t("dashboard.usage.title", { last: formatLastUsed(row.usage.lastUsedAt, t) })}>
-            <Activity size={12} />
-            <span>{formatUsageMeta(row, t)}</span>
-          </div>
+        <div className="skill-card-agents">
+          {row.cells.map((cell) => (
+            <AgentIcon key={cell.agentId} agentId={cell.agentId} status={cell.displayStatus} size={18} />
+          ))}
         </div>
         <button
           className={"btn-icon-sync" + (isSyncing ? " syncing" : "")}
@@ -1055,10 +996,6 @@ function SkillRow({
             </Badge>
           );
         })}
-      </div>
-      <div className="skill-row-meta" title={t("dashboard.usage.title", { last: formatLastUsed(row.usage.lastUsedAt, t) })}>
-        <Activity size={12} />
-        <span>{formatUsageMeta(row, t)}</span>
       </div>
       <div className="skill-row-agents">
         {row.cells.map((cell) => (

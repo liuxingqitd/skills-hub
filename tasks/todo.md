@@ -82,6 +82,44 @@
 - 通过：`git diff --check`
 - 通过：启动 `npm run dev`，`http://localhost:3000/settings` 和 `http://localhost:3000` 返回 200。
 
+# 2026-07-01 移除 Skill 调用次数统计
+
+## Spec
+
+- 目标：移除 Skill 调用次数统计功能，降低使用和维护复杂度。
+- 范围：删除 usage JSONL 数据层、上报 API、Board model usage 字段、Dashboard 统计展示、Tauri 兼容字段和相关测试/i18n/CSS。
+- 非目标：不改动 Skill 扫描、安装、同步、分类、自研标记等现有能力。
+- 设计方向：回到简单的文件系统 inventory 模型，首页只展示安装/同步/分类信息。
+
+## Tasks
+
+- [x] 移除 usage 类型、数据层、API route 和相关测试
+- [x] 从 Web `SkillBoardModel` 中移除 usage 聚合和 row 字段
+- [x] 从 Dashboard UI、CSS 和 i18n 中移除调用统计展示
+- [x] 从 Tauri `SkillBoardModel` 中移除 usage schema 字段
+- [x] 运行测试、类型检查、构建和 Rust 检查
+
+## Verify
+
+- 代码中不再存在 `src/lib/usage`、`src/types/usage.ts` 或 `/api/usage/record`。
+- 首页卡片、列表和详情抽屉不再显示调用次数或调用统计。
+- Web 与 Tauri 的 `SkillBoardModel` schema 重新保持无 usage 字段。
+- 测试、类型检查和构建通过。
+
+## Review
+
+- 结果：删除 usage 数据层、usage 类型、`/api/usage/record` route 和对应测试。
+- 结果：`SkillBoardRow` 不再包含 `usage` 字段，`buildSkillBoardModel` 不再读取或聚合 usage 事件。
+- 结果：首页卡片、列表和详情抽屉不再显示调用次数；相关 CSS 和中英文 i18n key 已移除。
+- 结果：Tauri `SkillBoardModel` schema 不再返回 usage 字段。
+- 结果：版本升到 `0.1.11`，用于推送新 tag 触发桌面客户端 GitHub Action。
+- 通过：`npm test`（97 tests）
+- 通过：`npm run build`
+- 通过：`npx tsc --noEmit`
+- 通过：`cargo fmt --manifest-path src-tauri/Cargo.toml --check`
+- 通过：`cargo check --manifest-path src-tauri/Cargo.toml`
+- 通过：`git diff --check`
+
 # 2026-06-26 Skill 调用次数统计
 
 ## Spec

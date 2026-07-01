@@ -1,7 +1,6 @@
 import type { AgentDefinition } from "@/src/types/agents";
 import type { InstallStatus, RegistryRow } from "@/src/types/skills";
 import type { Category } from "@/src/types/categories";
-import type { SkillUsageSummary } from "@/src/types/usage";
 
 export type BoardDisplayStatus = "installed" | "missing" | "broken";
 
@@ -26,7 +25,6 @@ export type SkillBoardRow = {
   cells: SkillBoardCell[];
   raw: RegistryRow;
   isCustom: boolean;
-  usage: SkillUsageSummary;
 };
 
 export type SkillBoardModel = {
