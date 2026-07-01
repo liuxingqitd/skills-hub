@@ -2,6 +2,8 @@ import { buildOverviewModel } from "@/src/lib/server/build-overview-model";
 import { readCustomSkills } from "@/src/lib/config/custom-skills-store";
 import { readCategories } from "@/src/lib/config/categories-store";
 import { readSkillCategories } from "@/src/lib/config/skill-categories-store";
+import { readSkillUsageEvents } from "@/src/lib/usage/usage-store";
+import { buildSkillUsageSummaries, emptySkillUsageSummary } from "@/src/lib/usage/usage-summary";
 import type { SkillBoardCell, SkillBoardModel, SkillBoardRow } from "@/src/types/board";
 import type { InstallStatus } from "@/src/types/skills";
 
@@ -14,13 +16,15 @@ const DISPLAY_STATUS: Record<InstallStatus, SkillBoardCell["displayStatus"]> = {
 };
 
 export async function buildSkillBoardModel(): Promise<SkillBoardModel> {
-  const [overview, customNames, categories, skillCatMap] = await Promise.all([
+  const [overview, customNames, categories, skillCatMap, usageEvents] = await Promise.all([
     buildOverviewModel(),
     readCustomSkills(),
     readCategories(),
     readSkillCategories(),
+    readSkillUsageEvents(),
   ]);
   const customSet = new Set(customNames);
+  const usageBySkill = buildSkillUsageSummaries(usageEvents);
   const rows: SkillBoardRow[] = overview.registryRows.map((row) => {
       const cells = row.states.map((state) => ({
         agentId: state.agentId,
@@ -49,7 +53,8 @@ export async function buildSkillBoardModel(): Promise<SkillBoardModel> {
         categoryIds,
         cells,
         raw: row,
-        isCustom: customSet.has(row.name)
+        isCustom: customSet.has(row.name),
+        usage: usageBySkill.get(row.name) ?? emptySkillUsageSummary(row.name)
       };
   });
 

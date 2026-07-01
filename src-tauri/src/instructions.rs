@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
     collections::HashMap,
@@ -75,13 +75,36 @@ pub struct SelectInstructionFileResult {
     path: String,
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct AppSettings {
+pub struct AppSettings {
     #[serde(default = "default_sync_mode")]
     sync_mode: String,
+    #[serde(
+        default = "default_language",
+        deserialize_with = "deserialize_language"
+    )]
+    language: String,
     #[serde(default)]
     instruction_paths: HashMap<String, String>,
+}
+
+impl Default for AppSettings {
+    fn default() -> Self {
+        Self {
+            sync_mode: default_sync_mode(),
+            language: default_language(),
+            instruction_paths: HashMap::new(),
+        }
+    }
+}
+
+#[derive(Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct SettingsPatch {
+    sync_mode: Option<String>,
+    language: Option<String>,
+    instruction_paths: Option<HashMap<String, String>>,
 }
 
 #[derive(Serialize)]
@@ -124,6 +147,36 @@ struct AgentInstructionConfig {
 
 fn default_sync_mode() -> String {
     "copy".to_string()
+}
+
+fn default_language() -> String {
+    "system".to_string()
+}
+
+#[tauri::command]
+pub fn get_app_settings(app: tauri::AppHandle) -> AppSettings {
+    read_settings(&app)
+}
+
+#[tauri::command]
+pub fn set_app_settings(
+    app: tauri::AppHandle,
+    patch: SettingsPatch,
+) -> Result<AppSettings, String> {
+    let mut settings = read_settings(&app);
+    if let Some(sync_mode) = patch.sync_mode {
+        if sync_mode == "copy" || sync_mode == "symlink" {
+            settings.sync_mode = sync_mode;
+        }
+    }
+    if let Some(language) = patch.language {
+        settings.language = normalize_language(&language);
+    }
+    if let Some(instruction_paths) = patch.instruction_paths {
+        settings.instruction_paths = normalize_instruction_paths(&instruction_paths);
+    }
+    write_settings(&app, &settings)?;
+    Ok(settings)
 }
 
 #[tauri::command]
@@ -468,6 +521,8 @@ fn read_settings(app: &tauri::AppHandle) -> AppSettings {
     crate::agents::read_config_string(app, "settings.json")
         .and_then(|content| serde_json::from_str::<AppSettings>(&content).ok())
         .map(|mut settings| {
+            settings.sync_mode = normalize_sync_mode(&settings.sync_mode);
+            settings.language = normalize_language(&settings.language);
             settings.instruction_paths = normalize_instruction_paths(&settings.instruction_paths);
             settings
         })
@@ -482,6 +537,32 @@ fn write_settings(app: &tauri::AppHandle, settings: &AppSettings) -> Result<(), 
     let content = serde_json::to_string_pretty(settings)
         .map_err(|error| format!("序列化设置失败: {error}"))?;
     fs::write(path, format!("{content}\n")).map_err(|error| format!("保存设置失败: {error}"))
+}
+
+fn normalize_sync_mode(mode: &str) -> String {
+    if mode == "copy" || mode == "symlink" {
+        mode.to_string()
+    } else {
+        default_sync_mode()
+    }
+}
+
+fn normalize_language(language: &str) -> String {
+    if language == "system" || language == "zh" || language == "en" {
+        language.to_string()
+    } else {
+        default_language()
+    }
+}
+
+fn deserialize_language<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let language = Option::<String>::deserialize(deserializer)?;
+    Ok(language
+        .map(|value| normalize_language(&value))
+        .unwrap_or_else(default_language))
 }
 
 fn normalize_instruction_paths(paths: &HashMap<String, String>) -> HashMap<String, String> {

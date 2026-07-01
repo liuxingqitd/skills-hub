@@ -16,6 +16,9 @@ export async function POST(request: Request) {
   if (payload.syncMode === "copy" || payload.syncMode === "symlink") {
     patch.syncMode = payload.syncMode;
   }
+  if (payload.language === "system" || payload.language === "zh" || payload.language === "en") {
+    patch.language = payload.language;
+  }
   if (payload.instructionPaths && typeof payload.instructionPaths === "object") {
     patch.instructionPaths = {};
     for (const [agent, value] of Object.entries(payload.instructionPaths)) {

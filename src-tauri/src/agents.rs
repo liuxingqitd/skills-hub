@@ -146,6 +146,17 @@ pub struct SkillBoardCell {
 
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct SkillUsageSummary {
+    skill_name: String,
+    total_count: usize,
+    count7d: usize,
+    count30d: usize,
+    last_used_at: Option<String>,
+    by_agent: HashMap<String, usize>,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct SkillInstallState {
     skill_name: String,
     agent_id: String,
@@ -192,6 +203,7 @@ pub struct SkillBoardRow {
     cells: Vec<SkillBoardCell>,
     raw: RegistryRow,
     is_custom: bool,
+    usage: SkillUsageSummary,
 }
 
 #[derive(Serialize)]
@@ -661,6 +673,7 @@ fn build_skill_board_model(app: &tauri::AppHandle) -> SkillBoardModel {
                 cells,
                 raw,
                 is_custom,
+                usage: empty_skill_usage_summary(&skill.name),
             }
         })
         .collect::<Vec<_>>();
@@ -673,6 +686,17 @@ fn build_skill_board_model(app: &tauri::AppHandle) -> SkillBoardModel {
         rows,
         categories,
         pending_sync_count,
+    }
+}
+
+fn empty_skill_usage_summary(skill_name: &str) -> SkillUsageSummary {
+    SkillUsageSummary {
+        skill_name: skill_name.to_string(),
+        total_count: 0,
+        count7d: 0,
+        count30d: 0,
+        last_used_at: None,
+        by_agent: HashMap::new(),
     }
 }
 

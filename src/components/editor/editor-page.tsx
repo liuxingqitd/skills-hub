@@ -15,6 +15,7 @@ import {
   selectInstructionFile,
 } from "@/src/lib/instructions/instructions-client";
 import type { InstructionAsset } from "@/src/types/instructions";
+import { useI18n } from "@/src/lib/i18n";
 
 type EditorViewMode = "edit" | "preview" | "split";
 
@@ -31,6 +32,7 @@ function pickDefaultAssetId(assets: InstructionAsset[], current: string | null) 
 
 export function EditorPage() {
   const { addToast } = useToast();
+  const { t } = useI18n();
 
   const [model, setModel] = useState<InstructionsPageModel | null>(null);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
@@ -58,12 +60,12 @@ export function EditorPage() {
       setSelectedAssetId((current) => pickDefaultAssetId(data.assets, current));
       return data;
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "加载失败");
+      setLoadError(err instanceof Error ? err.message : t("editor.loadFailed"));
       return null;
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadInstructions();
@@ -96,10 +98,10 @@ export function EditorPage() {
         previousHash: selected.contentHash,
       });
       await loadInstructions();
-      addToast(`${selected.title} 已保存`);
+      addToast(t("editor.savedToast", { title: selected.title }));
       return true;
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "保存失败");
+      setSaveError(err instanceof Error ? err.message : t("editor.saveFailed"));
       return false;
     } finally {
       setIsSaving(false);
@@ -120,9 +122,9 @@ export function EditorPage() {
       const savedPaths = await saveInstructionPaths(nextPaths);
       setInstructionPaths(savedPaths);
       await loadInstructions();
-      addToast(path ? "规则文件路径已更新" : "规则文件路径已重置");
+      addToast(path ? t("editor.pathUpdated") : t("editor.pathReset"));
     } catch (err) {
-      setPathError(err instanceof Error ? err.message : "路径保存失败");
+      setPathError(err instanceof Error ? err.message : t("editor.pathSaveFailed"));
     } finally {
       setIsSavingPath(false);
     }
@@ -134,7 +136,7 @@ export function EditorPage() {
       setPathDraft(path);
       await applyInstructionPath(path);
     } catch {
-      setPathError("无法打开文件选择器，请手动输入路径");
+      setPathError(t("editor.pickerFailed"));
     }
   }
 
@@ -161,9 +163,9 @@ export function EditorPage() {
       <div className="topbar">
         <div className="topbar-left">
           <Link href="/" className="btn-back">
-            <ArrowLeft size={16} /> 返回
+            <ArrowLeft size={16} /> {t("common.back")}
           </Link>
-          <span className="topbar-title">全局规则编辑器</span>
+          <span className="topbar-title">{t("editor.title")}</span>
         </div>
         <div className="topbar-right">
           <button
@@ -171,7 +173,7 @@ export function EditorPage() {
             onClick={handleSave}
             disabled={!canSave}
           >
-            <Save size={14} /> 保存
+            <Save size={14} /> {t("common.save")}
           </button>
         </div>
       </div>
@@ -180,10 +182,10 @@ export function EditorPage() {
       <div className="editor-layout">
         {/* File panel */}
         <div className="file-panel">
-          <div className="file-panel-header">规则文件</div>
+          <div className="file-panel-header">{t("editor.files")}</div>
           {isLoading ? (
             <div style={{ padding: "20px 12px", color: "var(--muted2)", fontSize: 13, textAlign: "center" }}>
-              加载中……
+              {t("common.loading")}
             </div>
           ) : loadError ? (
             <div style={{ padding: "20px 12px", color: "var(--error)", fontSize: 13, textAlign: "center" }}>
@@ -191,7 +193,7 @@ export function EditorPage() {
             </div>
           ) : assets.length === 0 ? (
             <div style={{ padding: "20px 12px", color: "var(--muted2)", fontSize: 13, textAlign: "center" }}>
-              没有可编辑的文件
+              {t("editor.noEditableFile")}
             </div>
           ) : (
             assets.map((asset) => {
@@ -207,7 +209,7 @@ export function EditorPage() {
                   <span>{asset.title}</span>
                   {isDirty && <span style={{ color: "var(--warn)", fontSize: 10 }}>●</span>}
                   <span className="file-item-meta">
-                    {asset.exists ? `${asset.contentPreview?.split("\n").length ?? 0} 行` : "缺失"}
+                    {asset.exists ? t("common.lines", { count: asset.contentPreview?.split("\n").length ?? 0 }) : t("common.missing")}
                   </span>
                 </div>
               );
@@ -223,10 +225,10 @@ export function EditorPage() {
                 <div className="editor-file-name">{selected.title}</div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <span className={"editor-status" + (hasUnsavedChanges ? " modified" : " saved")}>
-                    {hasUnsavedChanges ? "● 未保存" : "✓ 已保存"}
+                    {hasUnsavedChanges ? t("editor.unsaved") : t("editor.saved")}
                   </span>
                   <span className="editor-status" style={{ color: "var(--muted2)" }}>
-                    {lineCount} 行
+                    {t("common.lines", { count: lineCount })}
                   </span>
                   <button
                     className="btn btn-primary btn-sm"
@@ -238,7 +240,7 @@ export function EditorPage() {
                     ) : (
                       <Save size={12} />
                     )}
-                    {isSaving ? "保存中……" : "保存"}
+                    {isSaving ? t("common.saving") : t("common.save")}
                   </button>
                 </div>
               </div>
@@ -256,7 +258,7 @@ export function EditorPage() {
                   <textarea
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
-                    placeholder="在此编辑文件内容……"
+                    placeholder={t("editor.placeholder")}
                     spellCheck={false}
                   />
                 </div>
@@ -267,7 +269,7 @@ export function EditorPage() {
                   style={{ padding: 20, overflow: "auto" }}
                 >
                   <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-                    {draft || "暂无内容"}
+                    {draft || t("editor.emptyContent")}
                   </pre>
                 </div>
               )}
@@ -307,7 +309,7 @@ export function EditorPage() {
                   fontSize: 14,
                 }}
               >
-                {loadError ? loadError : "没有可编辑的文件"}
+                {loadError ? loadError : t("editor.noEditableFile")}
               </div>
             </>
           )}
@@ -336,6 +338,8 @@ function PathControls({
   onPick,
   onReset,
 }: PathControlsProps) {
+  const { t } = useI18n();
+
   return (
     <div
       style={{
@@ -350,7 +354,7 @@ function PathControls({
         <input
           value={pathDraft}
           onChange={(event) => onPathDraftChange(event.target.value)}
-          placeholder="全局规则文件路径"
+          placeholder={t("editor.pathPlaceholder")}
           style={{
             flex: 1,
             minWidth: 0,
@@ -365,13 +369,13 @@ function PathControls({
           }}
         />
         <button className="btn btn-ghost btn-sm" onClick={onPick} disabled={isSavingPath}>
-          选择文件
+          {t("editor.chooseFile")}
         </button>
         <button className="btn btn-primary btn-sm" onClick={onApply} disabled={isSavingPath}>
-          {isSavingPath ? "应用中……" : "应用路径"}
+          {isSavingPath ? t("editor.applying") : t("editor.applyPath")}
         </button>
         <button className="btn btn-ghost btn-sm" onClick={onReset} disabled={isSavingPath}>
-          重置
+          {t("common.reset")}
         </button>
       </div>
       {pathError && (

@@ -1,6 +1,7 @@
 "use client";
 
 import type { BoardDisplayStatus } from "@/src/types/board";
+import { useI18n } from "@/src/lib/i18n";
 
 type Props = {
   agentId: string;
@@ -19,14 +20,14 @@ const agentIcons: Record<string, string> = {
   opencode: "/icons/opencode.svg",
 };
 
-const statusLabels: Record<BoardDisplayStatus, string> = {
-  installed: "已安装",
-  missing: "缺失",
-  broken: "异常",
-};
-
 export function AgentIcon({ agentId, status, size = 16 }: Props) {
+  const { t } = useI18n();
   const src = agentIcons[agentId];
+  const statusLabels: Record<BoardDisplayStatus, string> = {
+    installed: t("common.installed"),
+    missing: t("common.missing"),
+    broken: t("common.error"),
+  };
 
   return (
     <span

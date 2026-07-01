@@ -31,6 +31,9 @@ import {
   loadCategories as loadCategoryDefinitions,
   updateCategory,
 } from "@/src/lib/config/categories-client";
+import { loadAppSettings, saveAppSettings } from "@/src/lib/config/settings-client";
+import type { LanguagePreference } from "@/src/lib/config/settings-store";
+import { getLocalizedCategory, useI18n } from "@/src/lib/i18n";
 
 /* ---- Presets ---- */
 const PRESET_EMOJIS = [
@@ -67,6 +70,7 @@ const DEFAULT_PRESETS: Category[] = [
 
 export function SettingsPage() {
   const { addToast } = useToast();
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<"categories" | "general" | "agents">("categories");
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,9 +114,9 @@ export function SettingsPage() {
       const created = await createCategory(data);
       setCategories((prev) => [...prev, created]);
       setShowAddModal(false);
-      addToast(`已添加分类「${data.name}」`);
+      addToast(t("settings.categories.added", { name: data.name }));
     } catch {
-      addToast("添加失败");
+      addToast(t("settings.categories.addFailed"));
     }
   }
 
@@ -121,9 +125,9 @@ export function SettingsPage() {
       const updated = await updateCategory(id, data);
       setCategories((prev) => prev.map((c) => (c.id === id ? updated : c)));
       setEditingCat(null);
-      addToast(`已更新分类「${data.name}」`);
+      addToast(t("settings.categories.updated", { name: data.name }));
     } catch {
-      addToast("更新失败");
+      addToast(t("settings.categories.updateFailed"));
     }
   }
 
@@ -132,9 +136,9 @@ export function SettingsPage() {
       await deleteCategory(id);
       setCategories((prev) => prev.filter((c) => c.id !== id));
       setDeletingCat(null);
-      addToast("已删除分类");
+      addToast(t("settings.categories.deleted"));
     } catch {
-      addToast("删除失败");
+      addToast(t("settings.categories.deleteFailed"));
     }
   }
 
@@ -151,11 +155,11 @@ export function SettingsPage() {
 
       // Always resync UI state with server state to recover consistency
       await loadCategories();
-      addToast("已恢复预设分类");
+      addToast(t("settings.categories.restored"));
     } catch {
       // Recovery: resync UI state with server on any unexpected failure
       try { await loadCategories(); } catch { /* ignore */ }
-      addToast("恢复失败，已重新加载分类状态");
+      addToast(t("settings.categories.restoreFailed"));
     }
   }
 
@@ -186,9 +190,9 @@ export function SettingsPage() {
     try {
       const data = await saveAgentDefinitions(nextAgents);
       setAgents(data);
-      addToast("Agent 配置已保存");
+      addToast(t("settings.agents.saved"));
     } catch {
-      addToast("保存失败");
+      addToast(t("settings.saveFailed"));
     } finally {
       setAgentsSaving(false);
     }
@@ -207,7 +211,7 @@ export function SettingsPage() {
           resolvedPath: path,
           status: "missing",
           skillCount: 0,
-          message: "检测失败",
+          message: t("settings.agents.checkFailed"),
         },
       }));
     } finally {
@@ -242,7 +246,7 @@ export function SettingsPage() {
       await saveAgents(nextAgents);
       await validateAgentPath(id, data.path);
     } catch {
-      addToast("无法打开文件夹选择器，请手动输入路径");
+      addToast(t("settings.agents.pickerFailed"));
     }
   }
 
@@ -254,7 +258,7 @@ export function SettingsPage() {
         id,
         name: data.name,
         skillsPath: data.skillsPath,
-        description: "自定义 Agent",
+        description: t("settings.agents.custom"),
         homepage: "",
         enabled: true,
         builtin: false,
@@ -269,7 +273,7 @@ export function SettingsPage() {
   async function deleteCustomAgent(agentId: string) {
     const agent = agents.find((item) => item.id === agentId);
     if (agent?.builtin) {
-      addToast("内置 Agent 不能删除，可以选择禁用");
+      addToast(t("settings.agents.cannotDeleteBuiltin"));
       return;
     }
     const nextAgents = agents.filter((item) => item.id !== agentId);
@@ -284,9 +288,9 @@ export function SettingsPage() {
       <div className="topbar">
         <div className="topbar-left">
           <Link href="/" className="btn-back">
-            <ArrowLeft size={16} /> 返回
+            <ArrowLeft size={16} /> {t("common.back")}
           </Link>
-          <span className="topbar-title">设置</span>
+          <span className="topbar-title">{t("settings.title")}</span>
         </div>
       </div>
 
@@ -294,24 +298,24 @@ export function SettingsPage() {
       <div className="settings-layout">
         {/* Settings nav */}
         <nav className="settings-nav">
-          <div className="settings-nav-label">设置</div>
+          <div className="settings-nav-label">{t("settings.title")}</div>
           <div
             className={"settings-nav-item" + (activeTab === "categories" ? " active" : "")}
             onClick={() => setActiveTab("categories")}
           >
-            <LayoutGrid size={16} /> 分类管理
+            <LayoutGrid size={16} /> {t("settings.categories")}
           </div>
           <div
             className={"settings-nav-item" + (activeTab === "general" ? " active" : "")}
             onClick={() => setActiveTab("general")}
           >
-            <Settings2 size={16} /> 通用设置
+            <Settings2 size={16} /> {t("settings.general")}
           </div>
           <div
             className={"settings-nav-item" + (activeTab === "agents" ? " active" : "")}
             onClick={() => { setActiveTab("agents"); loadAgents(); }}
           >
-            <Monitor size={16} /> Agent 管理
+            <Monitor size={16} /> {t("settings.agents")}
           </div>
         </nav>
 
@@ -321,10 +325,9 @@ export function SettingsPage() {
             <div className="settings-panel-content">
               <div className="panel-header">
                 <div>
-                  <div className="panel-title">分类管理</div>
+                  <div className="panel-title">{t("settings.categories")}</div>
                   <div className="panel-desc">
-                    管理 Skill 的功能分类，共 {categories.length} 个分类。
-                    每个 Skill 可关联多个分类，方便按功能快速筛选。
+                    {t("settings.categories.desc", { count: categories.length })}
                   </div>
                 </div>
                 <div className="panel-actions">
@@ -332,60 +335,63 @@ export function SettingsPage() {
                     className="btn btn-outline btn-sm"
                     onClick={() => setShowRestoreConfirm(true)}
                   >
-                    <RotateCcw size={12} /> 恢复预设
+                    <RotateCcw size={12} /> {t("settings.categories.restore")}
                   </button>
                   <button
                     className="btn btn-primary btn-sm"
                     onClick={() => setShowAddModal(true)}
                   >
-                    <Plus size={12} /> 新建分类
+                    <Plus size={12} /> {t("settings.categories.new")}
                   </button>
                 </div>
               </div>
 
               {loading ? (
                 <div style={{ padding: "40px 0", textAlign: "center", color: "var(--muted2)", fontSize: 13 }}>
-                  加载中……
+                  {t("common.loading")}
                 </div>
               ) : sorted.length === 0 ? (
                 <div className="empty-state">
                   <LayoutGrid size={40} />
-                  <div className="empty-state-title">暂无分类</div>
-                  <div className="empty-state-desc">点击"新建分类"开始创建，或恢复预设分类。</div>
+                  <div className="empty-state-title">{t("settings.categories.emptyTitle")}</div>
+                  <div className="empty-state-desc">{t("settings.categories.emptyDesc")}</div>
                 </div>
               ) : (
                 <div className="category-list">
-                  {sorted.map((cat) => (
-                    <div key={cat.id} className="category-card">
-                      <div className="cat-color-dot" style={{ background: cat.color }} />
-                      <div className="category-icon" style={{ background: `color-mix(in oklch, ${cat.color} 14%, transparent)` }}>
-                        {cat.icon}
-                      </div>
-                      <div className="category-info">
-                        <div className="category-name-row">
-                          <span className="category-name">{cat.name}</span>
-                          {cat.isPreset && <span className="preset-badge">预设</span>}
+                  {sorted.map((cat) => {
+                    const localized = getLocalizedCategory(cat, t);
+                    return (
+                      <div key={cat.id} className="category-card">
+                        <div className="cat-color-dot" style={{ background: cat.color }} />
+                        <div className="category-icon" style={{ background: `color-mix(in oklch, ${cat.color} 14%, transparent)` }}>
+                          {cat.icon}
                         </div>
-                        <div className="category-desc">{cat.desc || "暂无描述"}</div>
+                        <div className="category-info">
+                          <div className="category-name-row">
+                            <span className="category-name">{localized.name}</span>
+                            {cat.isPreset && <span className="preset-badge">{t("settings.categories.preset")}</span>}
+                          </div>
+                          <div className="category-desc">{localized.desc || t("settings.categories.noDesc")}</div>
+                        </div>
+                        <div className="category-actions">
+                          <button
+                            className="btn-icon-sm"
+                            onClick={() => setEditingCat(cat)}
+                            title={t("settings.categoryModal.editTitle")}
+                          >
+                            <Edit3 size={14} />
+                          </button>
+                          <button
+                            className="btn-icon-sm"
+                            onClick={() => setDeletingCat(cat)}
+                            title={t("common.delete")}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
-                      <div className="category-actions">
-                        <button
-                          className="btn-icon-sm"
-                          onClick={() => setEditingCat(cat)}
-                          title="编辑"
-                        >
-                          <Edit3 size={14} />
-                        </button>
-                        <button
-                          className="btn-icon-sm"
-                          onClick={() => setDeletingCat(cat)}
-                          title="删除"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -399,9 +405,9 @@ export function SettingsPage() {
             <div className="settings-panel-content">
               <div className="panel-header">
                 <div>
-                  <div className="panel-title">Agent 管理</div>
+                  <div className="panel-title">{t("settings.agents")}</div>
                   <div className="panel-desc">
-                    管理所有 Coding Agent。启用的 Agent 将显示在首页并参与 Skill 同步；Skill 文件夹路径以这里选择的目录为准。
+                    {t("settings.agents.desc")}
                   </div>
                 </div>
                 <div className="panel-actions">
@@ -409,27 +415,27 @@ export function SettingsPage() {
                     className="btn btn-outline btn-sm"
                     onClick={() => setShowAddAgentModal(true)}
                   >
-                    <Plus size={12} /> 新增 Agent
+                    <Plus size={12} /> {t("settings.agents.new")}
                   </button>
                   <button
                     className="btn btn-primary btn-sm"
                     onClick={() => saveAgents()}
                     disabled={agentsSaving}
                   >
-                    {agentsSaving ? "保存中……" : "已自动保存"}
+                    {agentsSaving ? t("common.saving") : t("settings.agents.autoSaved")}
                   </button>
                 </div>
               </div>
 
               {agentsLoading ? (
                 <div style={{ padding: "40px 0", textAlign: "center", color: "var(--muted2)", fontSize: 13 }}>
-                  加载中……
+                  {t("common.loading")}
                 </div>
               ) : agents.length === 0 ? (
                 <div className="empty-state">
                   <Monitor size={40} />
-                  <div className="empty-state-title">暂无 Agent</div>
-                  <div className="empty-state-desc">Agent 注册表为空，请检查配置。</div>
+                  <div className="empty-state-title">{t("settings.agents.emptyTitle")}</div>
+                  <div className="empty-state-desc">{t("settings.agents.emptyDesc")}</div>
                 </div>
               ) : (
                 <div className="agent-list">
@@ -445,10 +451,10 @@ export function SettingsPage() {
                         <div className="agent-main">
                           <div className="agent-title-row">
                             <span className="agent-name">{agent.name}</span>
-                            {agent.builtin && <span className="preset-badge">内置</span>}
+                            {agent.builtin && <span className="preset-badge">{t("settings.agents.builtin")}</span>}
                           </div>
                           <div className="agent-desc">
-                            {agent.description || "自定义 Agent"}
+                            {agent.description || t("settings.agents.custom")}
                             {agent.homepage && (
                               <a
                                 href={agent.homepage}
@@ -456,7 +462,7 @@ export function SettingsPage() {
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                <ExternalLink size={10} /> 官网
+                                <ExternalLink size={10} /> {t("settings.agents.website")}
                               </a>
                             )}
                           </div>
@@ -466,27 +472,27 @@ export function SettingsPage() {
                               value={agent.skillsPath}
                               onChange={(e) => updateAgentPath(agent.id, e.target.value)}
                               onBlur={() => saveAgentPath(agent.id)}
-                              placeholder="选择 Skill 文件夹路径"
+                              placeholder={t("settings.agents.pathPlaceholder")}
                             />
                             <button
                               className="btn btn-outline btn-sm"
                               onClick={() => chooseAgentPath(agent.id)}
                               disabled={agentsSaving}
-                              title="选择文件夹"
+                              title={t("settings.agents.chooseFolder")}
                             >
-                              <FolderOpen size={12} /> 选择
+                              <FolderOpen size={12} /> {t("common.choose")}
                             </button>
                             <button
                               className="btn-icon-sm"
                               onClick={() => validateAgentPath(agent.id, agent.skillsPath)}
                               disabled={isChecking}
-                              title="检测路径"
+                              title={t("settings.agents.checkPath")}
                             >
                               <RefreshCw size={14} />
                             </button>
                           </div>
                           <div className={"agent-path-status agent-path-status--" + (pathCheck?.status ?? "empty")}>
-                            {isChecking ? "检测中……" : pathCheck?.message ?? "尚未检测"}
+                            {isChecking ? t("settings.agents.checking") : pathCheck?.message ?? t("settings.agents.notChecked")}
                             {pathCheck?.resolvedPath && pathCheck.resolvedPath !== agent.skillsPath && (
                               <span> · {pathCheck.resolvedPath}</span>
                             )}
@@ -495,7 +501,7 @@ export function SettingsPage() {
                         <div className="agent-actions">
                           <label className="toggle-switch" style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
                             <span style={{ fontSize: 12, color: "var(--muted)" }}>
-                              {agent.enabled ? "已启用" : "已禁用"}
+                              {agent.enabled ? t("settings.agents.enabled") : t("settings.agents.disabled")}
                             </span>
                             <div
                               style={{
@@ -533,7 +539,7 @@ export function SettingsPage() {
                             <button
                               className="btn-icon-sm"
                               onClick={() => setDeletingAgent(agent)}
-                              title="删除自定义 Agent"
+                              title={t("settings.agents.deleteCustom")}
                             >
                               <Trash2 size={14} />
                             </button>
@@ -571,9 +577,11 @@ export function SettingsPage() {
       {/* Delete confirm */}
       <ConfirmDialog
         open={deletingCat !== null}
-        title={`删除分类「${deletingCat?.name ?? ""}」`}
-        text="确定要删除此分类吗？所有关联的 Skill 将不再标记为此分类。"
-        confirmLabel="删除"
+        title={t("settings.categories.deleteTitle", {
+          name: deletingCat ? getLocalizedCategory(deletingCat, t).name : "",
+        })}
+        text={t("settings.categories.deleteText")}
+        confirmLabel={t("common.delete")}
         danger
         onConfirm={() => deletingCat && handleDelete(deletingCat.id)}
         onCancel={() => setDeletingCat(null)}
@@ -582,9 +590,9 @@ export function SettingsPage() {
       {/* Restore confirm */}
       <ConfirmDialog
         open={showRestoreConfirm}
-        title="恢复预设分类"
-        text="将重置所有分类为系统预设的 8 个默认分类。自定义分类将被移除。确定继续？"
-        confirmLabel="恢复"
+        title={t("settings.categories.restoreTitle")}
+        text={t("settings.categories.restoreText")}
+        confirmLabel={t("settings.categories.restore")}
         onConfirm={handleRestoreDefaults}
         onCancel={() => setShowRestoreConfirm(false)}
       />
@@ -598,9 +606,9 @@ export function SettingsPage() {
 
       <ConfirmDialog
         open={deletingAgent !== null}
-        title={`删除 Agent「${deletingAgent?.name ?? ""}」`}
-        text="确定要删除这个自定义 Agent 吗？已安装在该目录下的 Skill 文件不会被删除。"
-        confirmLabel="删除"
+        title={t("settings.agents.deleteTitle", { name: deletingAgent?.name ?? "" })}
+        text={t("settings.agents.deleteText")}
+        confirmLabel={t("common.delete")}
         danger
         onConfirm={() => deletingAgent && deleteCustomAgent(deletingAgent.id)}
         onCancel={() => setDeletingAgent(null)}
@@ -615,13 +623,13 @@ export function SettingsPage() {
 
 function GeneralSettings() {
   const { addToast } = useToast();
+  const { languagePreference, setLanguage, t } = useI18n();
   const [syncMode, setSyncMode] = useState<"copy" | "symlink">("copy");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetch("/api/settings")
-      .then((res) => res.json())
+    loadAppSettings()
       .then((data) => {
         if (data.syncMode) setSyncMode(data.syncMode);
       })
@@ -633,15 +641,22 @@ function GeneralSettings() {
     setSyncMode(mode);
     setSaving(true);
     try {
-      const res = await fetch("/api/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ syncMode: mode }),
-      });
-      if (!res.ok) throw new Error(`Save failed: ${res.status}`);
-      addToast(mode === "symlink" ? "已切换为软链接模式" : "已切换为拷贝模式");
+      await saveAppSettings({ syncMode: mode });
+      addToast(t(mode === "symlink" ? "settings.sync.saved.symlink" : "settings.sync.saved.copy"));
     } catch {
-      addToast("保存失败");
+      addToast(t("settings.saveFailed"));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleLanguageChange(nextLanguage: LanguagePreference) {
+    setSaving(true);
+    try {
+      await setLanguage(nextLanguage);
+      addToast(t(`settings.language.saved.${nextLanguage}`));
+    } catch {
+      addToast(t("settings.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -652,12 +667,12 @@ function GeneralSettings() {
       <div className="settings-panel-content">
         <div className="panel-header">
           <div>
-            <div className="panel-title">通用设置</div>
-            <div className="panel-desc">应用级别的通用配置。</div>
+            <div className="panel-title">{t("settings.general")}</div>
+            <div className="panel-desc">{t("settings.general.desc")}</div>
           </div>
         </div>
         <div style={{ padding: "40px 0", textAlign: "center", color: "var(--muted2)", fontSize: 13 }}>
-          加载中……
+          {t("common.loading")}
         </div>
       </div>
     );
@@ -667,15 +682,35 @@ function GeneralSettings() {
     <div className="settings-panel-content">
       <div className="panel-header">
         <div>
-          <div className="panel-title">通用设置</div>
-          <div className="panel-desc">应用级别的通用配置。</div>
+          <div className="panel-title">{t("settings.general")}</div>
+          <div className="panel-desc">{t("settings.general.desc")}</div>
         </div>
       </div>
 
       <div className="settings-group">
-        <div className="settings-group-title">Skill 同步方式</div>
+        <div className="settings-group-title">{t("settings.language.title")}</div>
         <div className="settings-group-desc">
-          选择将 Skill 从数据源部署到各 Agent 目录的方式。切换后新操作立即生效，已同步的 Skill 不受影响。
+          {t("settings.language.desc")}
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          {(["system", "zh", "en"] as const).map((option) => (
+            <button
+              key={option}
+              className={"btn btn-sm " + (languagePreference === option ? "btn-primary" : "btn-outline")}
+              onClick={() => handleLanguageChange(option)}
+              disabled={saving || languagePreference === option}
+              type="button"
+            >
+              {t(`settings.language.${option}`)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="settings-group">
+        <div className="settings-group-title">{t("settings.sync.title")}</div>
+        <div className="settings-group-desc">
+          {t("settings.sync.desc")}
         </div>
 
         <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
@@ -699,9 +734,9 @@ function GeneralSettings() {
               disabled={saving}
               style={{ display: "none" }}
             />
-            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>拷贝文件夹</div>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{t("settings.sync.copy")}</div>
             <div style={{ fontSize: 12, color: "var(--muted)" }}>
-              将 Skill 完整复制到每个 Agent 目录，各副本独立，磁盘占用较大但无耦合。
+              {t("settings.sync.copyDesc")}
             </div>
           </label>
 
@@ -725,14 +760,14 @@ function GeneralSettings() {
               disabled={saving}
               style={{ display: "none" }}
             />
-            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>软链接</div>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{t("settings.sync.symlink")}</div>
             <div style={{ fontSize: 12, color: "var(--muted)" }}>
-              创建指向数据源的符号链接，所有 Agent 共享同一份文件，节省磁盘空间。
+              {t("settings.sync.symlinkDesc")}
             </div>
           </label>
         </div>
         {saving && (
-          <div style={{ marginTop: 8, fontSize: 12, color: "var(--muted)" }}>保存中……</div>
+          <div style={{ marginTop: 8, fontSize: 12, color: "var(--muted)" }}>{t("common.saving")}</div>
         )}
       </div>
     </div>
@@ -776,6 +811,7 @@ function AgentModal({
   onSave: (data: { name: string; skillsPath: string }) => void;
   onClose: () => void;
 }) {
+  const { t } = useI18n();
   const [name, setName] = useState("");
   const [skillsPath, setSkillsPath] = useState("");
   const [error, setError] = useState("");
@@ -797,11 +833,11 @@ function AgentModal({
     const trimmedName = name.trim();
     const trimmedPath = skillsPath.trim();
     if (!trimmedName) {
-      setError("请输入 Agent 名称");
+      setError(t("settings.agentModal.nameRequired"));
       return;
     }
     if (!trimmedPath) {
-      setError("请选择或输入 Skill 文件夹路径");
+      setError(t("settings.agentModal.pathRequired"));
       return;
     }
     onSave({ name: trimmedName, skillsPath: trimmedPath });
@@ -817,7 +853,7 @@ function AgentModal({
         setError("");
       }
     } catch {
-      setError("无法打开文件夹选择器，请手动输入路径");
+      setError(t("settings.agents.pickerFailed"));
     }
   }
 
@@ -825,27 +861,27 @@ function AgentModal({
     <Modal
       open={open}
       onClose={onClose}
-      title="新增 Agent"
-      description="添加一个自定义 Agent，并指定它读取 Skill 的文件夹。"
+      title={t("settings.agentModal.title")}
+      description={t("settings.agentModal.desc")}
       footer={
         <>
-          <button className="btn btn-ghost" onClick={onClose}>取消</button>
-          <button className="btn btn-primary" onClick={handleSave}>添加 Agent</button>
+          <button className="btn btn-ghost" onClick={onClose}>{t("common.cancel")}</button>
+          <button className="btn btn-primary" onClick={handleSave}>{t("settings.agentModal.add")}</button>
         </>
       }
     >
       <div className="modal-field">
-        <label>Agent 名称</label>
+        <label>{t("settings.agentModal.name")}</label>
         <input
           type="text"
           value={name}
           onChange={(e) => handleNameChange(e.target.value)}
-          placeholder="例如：My Local Agent"
+          placeholder={t("settings.agentModal.namePlaceholder")}
           autoFocus
         />
       </div>
       <div className="modal-field">
-        <label>Skill 文件夹路径</label>
+        <label>{t("settings.agentModal.path")}</label>
         <div className="agent-path-row">
           <input
             className="agent-path-input"
@@ -855,7 +891,7 @@ function AgentModal({
             placeholder="/Users/me/.my-agent/skills"
           />
           <button className="btn btn-outline btn-sm" onClick={choosePath}>
-            <FolderOpen size={12} /> 选择
+            <FolderOpen size={12} /> {t("common.choose")}
           </button>
         </div>
       </div>
@@ -901,6 +937,7 @@ function CategoryModal({
   onSave: (data: { name: string; desc: string; icon: string; color: string }) => void;
   onClose: () => void;
 }) {
+  const { t } = useI18n();
   const [name, setName] = useState(initial?.name || "");
   const [desc, setDesc] = useState(initial?.desc || "");
   const [icon, setIcon] = useState(initial?.icon || "📦");
@@ -910,11 +947,11 @@ function CategoryModal({
   const handleSave = () => {
     const trimmed = name.trim();
     if (!trimmed) {
-      setError("请输入分类名称");
+      setError(t("settings.categoryModal.nameRequired"));
       return;
     }
     if (trimmed.length > 20) {
-      setError("名称不超过 20 个字符");
+      setError(t("settings.categoryModal.nameTooLong"));
       return;
     }
     onSave({ name: trimmed, desc: desc.trim(), icon, color });
@@ -924,19 +961,19 @@ function CategoryModal({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-title">
-          {mode === "add" ? "新建分类" : "编辑分类"}
+          {mode === "add" ? t("settings.categoryModal.addTitle") : t("settings.categoryModal.editTitle")}
         </div>
         <div className="modal-desc">
           {mode === "add"
-            ? "添加一个新的 Skill 分类，方便按功能组织所有 Skill。"
-            : "修改分类的名称、描述、图标或颜色。"}
+            ? t("settings.categoryModal.addDesc")
+            : t("settings.categoryModal.editDesc")}
         </div>
 
         <div className="modal-field">
-          <label>名称</label>
+          <label>{t("settings.categoryModal.name")}</label>
           <input
             type="text"
-            placeholder="例如：代码审查、自动化流程"
+            placeholder={t("settings.categoryModal.namePlaceholder")}
             value={name}
             onChange={(e) => { setName(e.target.value); setError(""); }}
             autoFocus
@@ -945,16 +982,16 @@ function CategoryModal({
         </div>
 
         <div className="modal-field">
-          <label>描述</label>
+          <label>{t("settings.categoryModal.desc")}</label>
           <textarea
-            placeholder="简要描述此分类包含哪些类型的 Skill……"
+            placeholder={t("settings.categoryModal.descPlaceholder")}
             value={desc}
             onChange={(e) => setDesc(e.target.value)}
           />
         </div>
 
         <div className="modal-field">
-          <label>图标</label>
+          <label>{t("settings.categoryModal.icon")}</label>
           <div className="modal-emoji-grid">
             {PRESET_EMOJIS.map((e) => (
               <div
@@ -969,7 +1006,7 @@ function CategoryModal({
         </div>
 
         <div className="modal-field">
-          <label>标识色</label>
+          <label>{t("settings.categoryModal.color")}</label>
           <div className="color-options">
             {CATEGORY_COLORS.map((c) => (
               <div
@@ -984,9 +1021,9 @@ function CategoryModal({
         </div>
 
         <div className="modal-actions">
-          <button className="btn btn-ghost" onClick={onClose}>取消</button>
+          <button className="btn btn-ghost" onClick={onClose}>{t("common.cancel")}</button>
           <button className="btn btn-primary" onClick={handleSave}>
-            {mode === "add" ? "添加分类" : "保存修改"}
+            {mode === "add" ? t("settings.categoryModal.add") : t("settings.categoryModal.save")}
           </button>
         </div>
       </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/src/lib/i18n";
+
 export default function InstructionsError({
   error,
   reset,
@@ -7,11 +9,13 @@ export default function InstructionsError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { t } = useI18n();
+
   return (
     <div className="main">
       <div className="topbar">
         <div className="topbar-left">
-          <span className="topbar-title">全局规则编辑器</span>
+          <span className="topbar-title">{t("editor.title")}</span>
         </div>
       </div>
       <div
@@ -24,9 +28,9 @@ export default function InstructionsError({
         }}
       >
         <div style={{ maxWidth: 520, display: "grid", gap: 12 }}>
-          <h1 style={{ margin: 0, fontSize: 18 }}>全局规则加载失败</h1>
+          <h1 style={{ margin: 0, fontSize: 18 }}>{t("editor.errorTitle")}</h1>
           <p style={{ margin: 0, color: "var(--muted2)", fontSize: 13 }}>
-            页面渲染时遇到异常，请重试。若问题持续出现，可以打开开发者控制台查看详细错误。
+            {t("editor.errorDesc")}
           </p>
           {error.message && (
             <pre
@@ -41,7 +45,7 @@ export default function InstructionsError({
             </pre>
           )}
           <button className="btn btn-primary btn-sm" onClick={reset}>
-            重新加载
+            {t("editor.reload")}
           </button>
         </div>
       </div>

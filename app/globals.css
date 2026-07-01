@@ -667,10 +667,30 @@ textarea {
   margin-top: 14px;
   padding-top: 12px;
   border-top: 1px solid var(--border);
+  gap: 12px;
 }
 .skill-card-meta {
   font-size: 11px;
   color: var(--muted2);
+}
+.skill-card-footer-main {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+}
+.skill-usage-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--muted2);
+}
+.skill-usage-meta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Agent icons in skill card footer */
@@ -782,10 +802,11 @@ textarea {
 .skill-row-meta {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 5px;
   flex-shrink: 0;
   font-size: 12px;
   color: var(--muted2);
+  min-width: 130px;
 }
 .skill-row-arrow {
   color: var(--muted2);
@@ -798,6 +819,42 @@ textarea {
 .skill-row-arrow svg {
   width: 16px;
   height: 16px;
+}
+
+.usage-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.usage-detail-grid > div {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface2);
+}
+.usage-detail-value {
+  font: 600 16px/1.2 var(--font-display);
+  overflow-wrap: anywhere;
+}
+.usage-detail-label {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--muted2);
+}
+.usage-agent-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.usage-agent-pill {
+  padding: 4px 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--muted);
 }
 
 /* ============================================================

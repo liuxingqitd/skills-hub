@@ -3,6 +3,8 @@
 import { useEffect, type ReactNode } from "react";
 import { X } from "lucide-react";
 
+import { useI18n } from "@/src/lib/i18n";
+
 type ModalProps = {
   open: boolean;
   onClose: () => void;
@@ -22,6 +24,8 @@ export function Modal({
   footer,
   width,
 }: ModalProps) {
+  const { t } = useI18n();
+
   useEffect(() => {
     if (!open) return;
     function handleKey(e: KeyboardEvent) {
@@ -49,7 +53,7 @@ export function Modal({
             <button
               className="btn-icon-sm"
               onClick={onClose}
-              aria-label="关闭"
+              aria-label={t("common.close")}
               style={{ marginTop: -4, marginRight: -4 }}
             >
               <X size={14} />
@@ -79,11 +83,13 @@ export function ConfirmDialog({
   open,
   title,
   text,
-  confirmLabel = "确认",
+  confirmLabel,
   danger = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const { t } = useI18n();
+
   useEffect(() => {
     if (!open) return;
     function handleKey(e: KeyboardEvent) {
@@ -102,13 +108,13 @@ export function ConfirmDialog({
         <div className="confirm-text">{text}</div>
         <div className="confirm-actions">
           <button className="btn btn-ghost" onClick={onCancel}>
-            取消
+            {t("common.cancel")}
           </button>
           <button
             className={"btn " + (danger ? "btn-danger" : "btn-primary")}
             onClick={onConfirm}
           >
-            {confirmLabel}
+            {confirmLabel ?? t("common.confirm")}
           </button>
         </div>
       </div>

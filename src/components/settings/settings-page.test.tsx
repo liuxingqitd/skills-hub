@@ -25,15 +25,18 @@ const agents = [
 
 async function renderSettingsPage() {
   vi.stubGlobal("React", React);
-  const [{ SettingsPage }, { ToastProvider }] = await Promise.all([
+  const [{ SettingsPage }, { ToastProvider }, { I18nProvider }] = await Promise.all([
     import("./settings-page"),
     import("@/src/components/ui/toast"),
+    import("@/src/lib/i18n"),
   ]);
 
   return render(
-    <ToastProvider>
-      <SettingsPage />
-    </ToastProvider>
+    <I18nProvider>
+      <ToastProvider>
+        <SettingsPage />
+      </ToastProvider>
+    </I18nProvider>
   );
 }
 
@@ -51,6 +54,9 @@ describe("SettingsPage agent management", () => {
       const url = String(input);
       if (url === "/api/categories") {
         return Response.json([]);
+      }
+      if (url === "/api/settings") {
+        return Response.json({ syncMode: "copy", language: "zh", instructionPaths: {} });
       }
       if (url === "/api/agents" && !init?.method) {
         return Response.json(agents);
@@ -111,6 +117,9 @@ describe("SettingsPage agent management", () => {
       if (url === "/api/categories") {
         return Response.json([]);
       }
+      if (url === "/api/settings") {
+        return Response.json({ syncMode: "copy", language: "zh", instructionPaths: {} });
+      }
       if (url === "/api/agents" && !init?.method) {
         return Response.json(agents);
       }
@@ -168,6 +177,9 @@ describe("SettingsPage agent management", () => {
       if (url === "/api/categories") {
         return Response.json([]);
       }
+      if (url === "/api/settings") {
+        return Response.json({ syncMode: "copy", language: "zh", instructionPaths: {} });
+      }
       if (url === "/api/agents" && !init?.method) {
         return Response.json(agents);
       }
@@ -222,5 +234,111 @@ describe("SettingsPage agent management", () => {
         }),
       ]);
     });
+  });
+
+  it("switches the client language from general settings", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === "/api/categories") {
+        return Response.json([]);
+      }
+      if (url === "/api/settings" && !init?.method) {
+        return Response.json({ syncMode: "copy", language: "zh", instructionPaths: {} });
+      }
+      if (url === "/api/settings" && init?.method === "POST") {
+        return Response.json(JSON.parse(String(init.body)));
+      }
+      return Response.json({}, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await renderSettingsPage();
+
+    fireEvent.click(await screen.findByText("通用设置"));
+    fireEvent.click(await screen.findByRole("button", { name: "English" }));
+
+    await waitFor(() => {
+      const languageCall = fetchMock.mock.calls.find(
+        ([url, init]) => url === "/api/settings" && init?.method === "POST"
+      );
+      expect(languageCall).toBeTruthy();
+      expect(JSON.parse(String(languageCall?.[1]?.body))).toEqual({ language: "en" });
+    });
+
+    await waitFor(() => {
+      expect(screen.getAllByText("General").length).toBeGreaterThan(0);
+    });
+  });
+
+  it("saves follow system as a language preference", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === "/api/categories") {
+        return Response.json([]);
+      }
+      if (url === "/api/settings" && !init?.method) {
+        return Response.json({ syncMode: "copy", language: "zh", instructionPaths: {} });
+      }
+      if (url === "/api/settings" && init?.method === "POST") {
+        return Response.json(JSON.parse(String(init.body)));
+      }
+      return Response.json({}, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await renderSettingsPage();
+
+    fireEvent.click(await screen.findByText("通用设置"));
+    fireEvent.click(await screen.findByRole("button", { name: "跟随系统" }));
+
+    await waitFor(() => {
+      const languageCall = fetchMock.mock.calls.find(
+        ([url, init]) => url === "/api/settings" && init?.method === "POST"
+      );
+      expect(languageCall).toBeTruthy();
+      expect(JSON.parse(String(languageCall?.[1]?.body))).toEqual({ language: "system" });
+    });
+  });
+
+  it("shows preset categories in the selected language and preserves custom category names", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === "/api/categories") {
+        return Response.json([
+          {
+            id: "cat-search",
+            name: "搜索检索",
+            icon: "🌐",
+            desc: "网络搜索、文档检索、信息提取",
+            color: "oklch(55% 0.12 170)",
+            order: 0,
+            isPreset: true,
+            keywords: [],
+          },
+          {
+            id: "cat-custom",
+            name: "其他",
+            icon: "🤖",
+            desc: "用户自定义分类",
+            color: "oklch(55% 0.15 240)",
+            order: 1,
+            isPreset: false,
+            keywords: [],
+          },
+        ]);
+      }
+      if (url === "/api/settings") {
+        return Response.json({ syncMode: "copy", language: "en", instructionPaths: {} });
+      }
+      return Response.json({}, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await renderSettingsPage();
+
+    expect(await screen.findByText("Search & Retrieval")).toBeTruthy();
+    expect(screen.getByText("Web search, document retrieval, and information extraction")).toBeTruthy();
+    expect(screen.getByText("其他")).toBeTruthy();
+    expect(screen.getByText("用户自定义分类")).toBeTruthy();
   });
 });

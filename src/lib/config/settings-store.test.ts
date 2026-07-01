@@ -33,6 +33,7 @@ describe("settings-store", () => {
     const { readSettings } = await import("@/src/lib/config/settings-store");
     const settings = await readSettings();
     expect(settings.syncMode).toBe("copy");
+    expect(settings.language).toBe("system");
     expect(settings.instructionPaths).toEqual({});
   });
 
@@ -45,10 +46,12 @@ describe("settings-store", () => {
 
     await writeSettings({
       syncMode: "symlink",
+      language: "en",
       instructionPaths: { codex: "/tmp/custom/AGENTS.md" },
     });
     const settings = await readSettings();
     expect(settings.syncMode).toBe("symlink");
+    expect(settings.language).toBe("en");
     expect(settings.instructionPaths.codex).toBe("/tmp/custom/AGENTS.md");
   });
 
@@ -61,6 +64,7 @@ describe("settings-store", () => {
 
     await writeSettings({
       syncMode: "copy",
+      language: "zh",
       instructionPaths: {
         " openclaw ": " /tmp/openclaw/AGENTS.md ",
         codex: "/tmp/codex/AGENTS.md",
@@ -73,5 +77,38 @@ describe("settings-store", () => {
       openclaw: "/tmp/openclaw/AGENTS.md",
       codex: "/tmp/codex/AGENTS.md",
     });
+  });
+
+  it("normalizes invalid or old missing language values to system", async () => {
+    const raw = await readRawSettings();
+    if (raw) originalContent = JSON.stringify(raw);
+    else originalContent = null;
+
+    await writeFile(
+      SETTINGS_PATH,
+      JSON.stringify({ syncMode: "copy", language: "fr", instructionPaths: {} }),
+      "utf-8"
+    );
+
+    const { readSettings } = await import("@/src/lib/config/settings-store");
+    const settings = await readSettings();
+    expect(settings.language).toBe("system");
+  });
+
+  it("persists system language preference", async () => {
+    const raw = await readRawSettings();
+    if (raw) originalContent = JSON.stringify(raw);
+    else originalContent = null;
+
+    const { readSettings, writeSettings } = await import("@/src/lib/config/settings-store");
+
+    await writeSettings({
+      syncMode: "copy",
+      language: "system",
+      instructionPaths: {},
+    });
+
+    const settings = await readSettings();
+    expect(settings.language).toBe("system");
   });
 });

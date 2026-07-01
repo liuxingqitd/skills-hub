@@ -50,16 +50,29 @@ const modelWithMissingFirstAsset: InstructionsPageModel = {
 
 async function renderEditorPage(model: InstructionsPageModel) {
   vi.stubGlobal("React", React);
-  vi.stubGlobal("fetch", vi.fn(async () => Response.json(model)));
-  const [{ EditorPage }, { ToastProvider }] = await Promise.all([
+  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url === "/api/instructions") return Response.json(model);
+    if (url === "/api/settings" && !init?.method) {
+      return Response.json({ syncMode: "copy", language: "zh", instructionPaths: {} });
+    }
+    if (url === "/api/settings" && init?.method === "POST") {
+      return Response.json(JSON.parse(String(init.body)));
+    }
+    return Response.json({}, { status: 404 });
+  }));
+  const [{ EditorPage }, { ToastProvider }, { I18nProvider }] = await Promise.all([
     import("./editor-page"),
     import("@/src/components/ui/toast"),
+    import("@/src/lib/i18n"),
   ]);
 
   return render(
-    <ToastProvider>
-      <EditorPage />
-    </ToastProvider>
+    <I18nProvider>
+      <ToastProvider>
+        <EditorPage />
+      </ToastProvider>
+    </I18nProvider>
   );
 }
 

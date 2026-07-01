@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Activity,
   ArrowUp,
   ChevronRight,
   Grid3X3,
@@ -27,6 +28,7 @@ import { useToast } from "@/src/components/ui/toast";
 import { Badge } from "@/src/components/ui/badge";
 import { ConfirmDialog } from "@/src/components/ui/modal";
 import { AgentIcon } from "@/src/components/ui/agent-icon";
+import { getLocalizedCategory, useI18n } from "@/src/lib/i18n";
 import { loadRuntimeSkillBoardModel } from "@/src/lib/board/skill-board-client";
 import {
   installDashboardSkill,
@@ -54,9 +56,32 @@ const Icons = {
   list: <List size={16} />,
 };
 
+type Translate = ReturnType<typeof useI18n>["t"];
+
+function formatUsageMeta(row: SkillBoardRow, t: Translate): string {
+  if (row.usage.totalCount === 0) return t("dashboard.usage.none");
+  return t("dashboard.usage.meta", { total: row.usage.totalCount, count30d: row.usage.count30d });
+}
+
+function formatLastUsed(lastUsedAt: string | null, t: Translate): string {
+  if (!lastUsedAt) return t("dashboard.usage.never");
+  const last = Date.parse(lastUsedAt);
+  if (!Number.isFinite(last)) return t("common.unknownTime");
+  const diffDays = Math.floor((Date.now() - last) / (24 * 60 * 60 * 1000));
+  if (diffDays <= 0) return t("common.today");
+  if (diffDays === 1) return t("common.yesterday");
+  if (diffDays < 30) return t("common.daysAgo", { count: diffDays });
+  return new Intl.DateTimeFormat(t("locale.date"), {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(last));
+}
+
 export function DashboardPage({ model }: { model: SkillBoardModel }) {
   const router = useRouter();
   const { addToast } = useToast();
+  const { t } = useI18n();
   const [activeModel, setActiveModel] = useState(model);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -133,12 +158,12 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
         if (!cancelled && nextModel) setActiveModel(nextModel);
       })
       .catch(() => {
-        if (!cancelled) setSyncError("桌面数据加载失败，请重新打开应用。");
+        if (!cancelled) setSyncError(t("dashboard.desktopLoadFailed"));
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   // ---- API calls ----
   async function runSync(body: SyncRequestBody, key: string) {
@@ -149,16 +174,16 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
       const result = await runDashboardSync(body);
       if (result.failed?.length > 0) {
         const reasons = result.failed.map((f: { agentName: string; error: string }) => `${f.agentName}: ${f.error}`).join("；");
-        throw new Error(`同步失败：${reasons}`);
+        throw new Error(`${t("dashboard.syncFailed")}: ${reasons}`);
       }
       if (result.completed?.length > 0) {
-        addToast(`同步完成（${result.completed.length} 项）`);
+        addToast(t("dashboard.syncDone", { count: result.completed.length }));
       } else {
-        addToast("无需同步");
+        addToast(t("dashboard.noSyncNeeded"));
       }
       refresh();
     } catch (err) {
-      setSyncError(err instanceof Error ? err.message : "同步失败");
+      setSyncError(err instanceof Error ? err.message : t("dashboard.syncFailed"));
     } finally {
       setBusyAction(null);
     }
@@ -175,10 +200,10 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
       setInstallResult(data);
       setInstallSource("");
       setShowInstallModal(false);
-      addToast(`已安装 ${data.discovered.map((s) => s.name).join("、")}`);
+      addToast(t("dashboard.installDone", { names: data.discovered.map((s) => s.name).join(", ") }));
       refresh();
     } catch (err) {
-      setSyncError(err instanceof Error ? err.message : "安装失败");
+      setSyncError(err instanceof Error ? err.message : t("dashboard.installFailed"));
     } finally {
       setBusyAction(null);
     }
@@ -191,10 +216,10 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
     try {
       await removeDashboardSkill(filteredSkill.name);
       setSelectedSkill(null);
-      addToast(`已删除 ${filteredSkill.name}`);
+      addToast(t("dashboard.deleteDone", { name: filteredSkill.name }));
       refresh();
     } catch (err) {
-      setSyncError(err instanceof Error ? err.message : "删除失败");
+      setSyncError(err instanceof Error ? err.message : t("dashboard.deleteFailed"));
     } finally {
       setBusyAction(null);
     }
@@ -204,10 +229,10 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
     setBusyAction(`tag:${skillName}`);
     try {
       await setDashboardCustomSkill(skillName, !isCustom);
-      addToast(isCustom ? "已取消自研标记" : "已标记为自研");
+      addToast(t(isCustom ? "dashboard.unmarkedCustom" : "dashboard.markedCustom"));
       refresh();
     } catch (err) {
-      setSyncError(err instanceof Error ? err.message : "更新失败");
+      setSyncError(err instanceof Error ? err.message : t("dashboard.updateFailed"));
     } finally {
       setBusyAction(null);
     }
@@ -221,7 +246,7 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selectedSkill]);
+  }, [selectedSkill, t]);
 
   // ---- Lazy-load skill content when a skill is selected ----
   useEffect(() => {
@@ -241,7 +266,7 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
       })
       .catch(() => {
         if (!cancelled) {
-          setSkillContent("未找到 SKILL.md。");
+          setSkillContent(t("dashboard.notFoundSkillMd"));
           setIsLoadingContent(false);
         }
       });
@@ -266,13 +291,13 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
           <Search size={16} />
           <input
             type="text"
-            placeholder="搜索 Skill……"
+            placeholder={t("dashboard.search")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
         <button className="btn btn-soft" onClick={() => setShowInstallModal(true)}>
-          <Link2 size={14} /> 安装
+          <Link2 size={14} /> {t("dashboard.install")}
         </button>
         <button
           className="btn btn-primary"
@@ -284,7 +309,7 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
           ) : (
             <RefreshCw size={14} />
           )}
-          {isBusy("sync-all") ? "同步中……" : "同步全部"}
+          {isBusy("sync-all") ? t("dashboard.syncing") : t("dashboard.syncAll")}
         </button>
       </div>
 
@@ -293,34 +318,34 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
         {/* Stats */}
         <div className="stats">
           <div className="stat-card">
-            <div className="stat-label">全部 Skill</div>
+            <div className="stat-label">{t("dashboard.allSkills")}</div>
             <div className="stat-value">{counts.all}</div>
             <div className="stat-change up">
-              <ArrowUp size={12} /> {counts.installed} 已同步
+              <ArrowUp size={12} /> {t("dashboard.synced", { count: counts.installed })}
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-label">连接 Agent</div>
+            <div className="stat-label">{t("dashboard.connectedAgents")}</div>
             <div className="stat-value">{activeModel.agents.length}</div>
             <div className="stat-change up">
-              <ArrowUp size={12} /> {activeModel.agents.filter((a) => a.enabled).length} 个在线
+              <ArrowUp size={12} /> {t("dashboard.onlineAgents", { count: activeModel.agents.filter((a) => a.enabled).length })}
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-label">待同步</div>
+            <div className="stat-label">{t("dashboard.pendingSync")}</div>
             <div className="stat-value">{counts.needsSync}</div>
             <div
               className="stat-change"
               style={counts.needsSync > 0 ? { color: "var(--warn)" } : { color: "var(--good)" }}
             >
-              {counts.needsSync > 0 ? "需同步变更" : "全部已同步"}
+              {counts.needsSync > 0 ? t("dashboard.needsSyncChanges") : t("dashboard.allSynced")}
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-label">来源分布</div>
+            <div className="stat-label">{t("dashboard.sourceDistribution")}</div>
             <div className="stat-value">{counts.all}</div>
             <div className="stat-change" style={{ color: "var(--muted2)" }}>
-              自研 {counts.custom} · 开源 {counts.all - counts.custom}
+              {t("dashboard.sourceCounts", { custom: counts.custom, open: counts.all - counts.custom })}
             </div>
           </div>
         </div>
@@ -336,19 +361,17 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
         {/* Install result */}
         {installResult && (
           <div className="install-result" role="status">
-            <strong>{installResult.discovered.map((s) => s.name).join("、")}</strong>
-            <span>已安装 {installResult.completed.length}</span>
-            <span>跳过 {installResult.skipped.length}</span>
-            <span>失败 {installResult.failed.length}</span>
+            <strong>{installResult.discovered.map((s) => s.name).join(", ")}</strong>
+            <span>{t("dashboard.installResult", { installed: installResult.completed.length, skipped: installResult.skipped.length, failed: installResult.failed.length })}</span>
           </div>
         )}
 
         {/* Filter bar */}
         <div className="category-filter">
           {([
-            { key: "all" as const, label: "全部", count: counts.all },
-            { key: "needs_sync" as const, label: "待同步", count: counts.needsSync },
-            { key: "broken" as const, label: "异常", count: counts.broken },
+            { key: "all" as const, label: t("dashboard.filterAll"), count: counts.all },
+            { key: "needs_sync" as const, label: t("dashboard.pendingSync"), count: counts.needsSync },
+            { key: "broken" as const, label: t("dashboard.filterBroken"), count: counts.broken },
           ]).map((f) => (
             <div
               key={f.key}
@@ -373,23 +396,23 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
         {/* Section header */}
         <div className="section-header">
           <div>
-            <div className="section-title">所有 Skill</div>
+            <div className="section-title">{t("dashboard.allSkills")}</div>
             <div className="section-sub">
-              共 {rows.length} 个，管理已安装的 Skill
+              {t("dashboard.sectionSub", { count: rows.length })}
             </div>
           </div>
           <div className="view-toggle">
             <button
               className={viewMode === "card" ? "active" : ""}
               onClick={() => setViewMode("card")}
-              title="卡片视图"
+              title={t("dashboard.cardView")}
             >
               {Icons.grid}
             </button>
             <button
               className={viewMode === "list" ? "active" : ""}
               onClick={() => setViewMode("list")}
-              title="列表视图"
+              title={t("dashboard.listView")}
             >
               {Icons.list}
             </button>
@@ -400,8 +423,8 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
         {rows.length === 0 ? (
           <div className="empty-state">
             <Search size={40} />
-            <div className="empty-state-title">没有找到匹配的 Skill</div>
-            <div className="empty-state-desc">试试调整搜索关键词</div>
+            <div className="empty-state-title">{t("dashboard.emptyTitle")}</div>
+            <div className="empty-state-desc">{t("dashboard.emptyDesc")}</div>
           </div>
         ) : viewMode === "card" ? (
           <div className="skill-grid">
@@ -486,11 +509,11 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
             setBusyAction(`cat:${filteredSkill.name}`);
             try {
               await setDashboardSkillCategories(filteredSkill.name, draftCategoryIds);
-              addToast("分类已更新");
+              addToast(t("dashboard.categoryUpdated"));
               setShowCategoryEditor(false);
               refresh();
             } catch (err) {
-              setSyncError(err instanceof Error ? err.message : "更新分类失败");
+              setSyncError(err instanceof Error ? err.message : t("dashboard.categoryUpdateFailed"));
             } finally {
               setBusyAction(null);
             }
@@ -502,9 +525,9 @@ export function DashboardPage({ model }: { model: SkillBoardModel }) {
       {/* Delete confirm */}
       <ConfirmDialog
         open={showDeleteConfirm}
-        title={`删除「${filteredSkill?.name ?? ""}」`}
-        text="此操作将从所有 Agent 及源目录中彻底删除此 Skill，不可恢复。"
-        confirmLabel="删除"
+        title={t("dashboard.deleteTitle", { name: filteredSkill?.name ?? "" })}
+        text={t("dashboard.deleteText")}
+        confirmLabel={t("common.delete")}
         danger
         onConfirm={handleDeleteSkill}
         onCancel={() => setShowDeleteConfirm(false)}
@@ -526,20 +549,22 @@ function CategoryFilterBar({
   selectedCategory: string | null;
   onCategoryChange: (category: string | null) => void;
 }) {
+  const { t } = useI18n();
+
   return (
     <div className="category-filter" style={{ marginTop: -12, marginBottom: 16 }}>
       <div
         className={"category-chip" + (selectedCategory === null ? " active" : "")}
         onClick={() => onCategoryChange(null)}
       >
-        全部分类
+        {t("dashboard.allCategories")}
       </div>
       <div
         className={"category-chip" + (selectedCategory === "__custom" ? " active" : "")}
         onClick={() => onCategoryChange(selectedCategory === "__custom" ? null : "__custom")}
         style={selectedCategory === "__custom" ? { background: "var(--warm)", borderColor: "var(--warm)" } : undefined}
       >
-        🏠 自研{" "}
+        {t("dashboard.custom")}{" "}
         <span className="category-chip-count">{model.rows.filter((r) => r.isCustom).length}</span>
       </div>
       <div
@@ -547,11 +572,12 @@ function CategoryFilterBar({
         onClick={() => onCategoryChange(selectedCategory === "__opensource" ? null : "__opensource")}
         style={selectedCategory === "__opensource" ? { background: "var(--good)", borderColor: "var(--good)" } : undefined}
       >
-        📖 开源{" "}
+        {t("dashboard.opensource")}{" "}
         <span className="category-chip-count">{model.rows.filter((r) => !r.isCustom).length}</span>
       </div>
       {model.categories.map((cat) => {
         const count = model.rows.filter((r) => r.categoryIds.includes(cat.id)).length;
+        const localized = getLocalizedCategory(cat, t);
         return (
           <div
             key={cat.id}
@@ -559,7 +585,7 @@ function CategoryFilterBar({
             onClick={() => onCategoryChange(selectedCategory === cat.id ? null : cat.id)}
             style={selectedCategory === cat.id ? { background: cat.color, borderColor: cat.color } : undefined}
           >
-            {cat.icon} {cat.name}{" "}
+            {cat.icon} {localized.name}{" "}
             <span className="category-chip-count">{count}</span>
           </div>
         );
@@ -587,11 +613,13 @@ function InstallModal({
   onSourceChange: (value: string) => void;
   onInstall: () => void;
 }) {
+  const { t } = useI18n();
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-title">通过链接安装 Skill</div>
-        <div className="modal-desc">粘贴 GitHub 或市场链接，自动安装对应的 Skill</div>
+        <div className="modal-title">{t("dashboard.installModal.title")}</div>
+        <div className="modal-desc">{t("dashboard.installModal.desc")}</div>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -612,14 +640,14 @@ function InstallModal({
               className="btn btn-ghost"
               onClick={onClose}
             >
-              取消
+              {t("common.cancel")}
             </button>
             <button
               type="submit"
               className="btn btn-primary"
               disabled={uiLocked || !installSource.trim()}
             >
-              {isInstalling ? "安装中……" : "安装"}
+              {isInstalling ? t("dashboard.installing") : t("dashboard.install")}
             </button>
           </div>
         </form>
@@ -669,6 +697,8 @@ function SkillDetailDrawer({
   onSaveCategories: () => void;
   onDeleteClick: () => void;
 }) {
+  const { t } = useI18n();
+
   return (
     <div className="detail-overlay" onClick={onClose}>
       <div className="detail-drawer" onClick={(e) => e.stopPropagation()}>
@@ -688,9 +718,9 @@ function SkillDetailDrawer({
             <div className="detail-hero-name">
               {skill.name}
               {skill.isCustom ? (
-                <Badge variant="self">自研</Badge>
+                <Badge variant="self">{t("dashboard.custom")}</Badge>
               ) : (
-                <Badge variant="opensource">开源</Badge>
+                <Badge variant="opensource">{t("dashboard.opensource")}</Badge>
               )}
             </div>
             <div className="detail-hero-desc">{skill.description}</div>
@@ -706,7 +736,7 @@ function SkillDetailDrawer({
               ) : (
                 <Tag size={12} />
               )}
-              {skill.isCustom ? "取消自研" : "标记自研"}
+              {skill.isCustom ? t("dashboard.unmarkCustom") : t("dashboard.markCustom")}
             </button>
             <button
               className="btn btn-sm btn-primary"
@@ -718,14 +748,44 @@ function SkillDetailDrawer({
               ) : (
                 <HardDriveDownload size={12} />
               )}
-              同步
+              {t("dashboard.sync")}
             </button>
           </div>
         </div>
 
+        {/* Usage */}
+        <div className="detail-card">
+          <div className="detail-card-label">{t("dashboard.usage.titleLabel")}</div>
+          <div className="usage-detail-grid">
+            <div>
+              <div className="usage-detail-value">{skill.usage.totalCount}</div>
+              <div className="usage-detail-label">{t("dashboard.usage.total")}</div>
+            </div>
+            <div>
+              <div className="usage-detail-value">{skill.usage.count30d}</div>
+              <div className="usage-detail-label">30d</div>
+            </div>
+            <div>
+              <div className="usage-detail-value">{formatLastUsed(skill.usage.lastUsedAt, t)}</div>
+              <div className="usage-detail-label">{t("dashboard.usage.lastUsed")}</div>
+            </div>
+          </div>
+          {Object.keys(skill.usage.byAgent).length > 0 && (
+            <div className="usage-agent-list">
+              {Object.entries(skill.usage.byAgent)
+                .sort((left, right) => right[1] - left[1])
+                .map(([agentId, count]) => (
+                  <span key={agentId} className="usage-agent-pill">
+                    {agentId} {count}
+                  </span>
+                ))}
+            </div>
+          )}
+        </div>
+
         {/* Source */}
         <div className="detail-card">
-          <div className="detail-card-label">源文件</div>
+          <div className="detail-card-label">{t("dashboard.sourceFile")}</div>
           <div className="detail-card-content" style={{ fontFamily: "var(--font-mono)", fontSize: 12, wordBreak: "break-all" }}>
             {skill.skillFilePath}
           </div>
@@ -733,7 +793,7 @@ function SkillDetailDrawer({
 
         {/* Agent statuses */}
         <div className="detail-card">
-          <div className="detail-card-label">Agent 安装状态</div>
+          <div className="detail-card-label">{t("dashboard.agentStatus")}</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
             {skill.cells.map((cell) => (
               <div
@@ -755,7 +815,7 @@ function SkillDetailDrawer({
                   </div>
                 </div>
                 <span className="board-status" data-status={cell.displayStatus}>
-                  {cell.displayStatus === "installed" ? "已安装" : cell.displayStatus === "missing" ? "缺失" : "异常"}
+                  {cell.displayStatus === "installed" ? t("common.installed") : cell.displayStatus === "missing" ? t("common.missing") : t("common.error")}
                 </span>
               </div>
             ))}
@@ -764,29 +824,30 @@ function SkillDetailDrawer({
 
         {/* Categories */}
         <div className="detail-card">
-          <div className="detail-card-label">分类</div>
+          <div className="detail-card-label">{t("dashboard.categories")}</div>
           <div className="detail-card-content">
             {!showCategoryEditor ? (
               <>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
                   {skill.categoryIds.length === 0 ? (
-                    <span style={{ fontSize: 12, color: "var(--muted2)" }}>暂未分类</span>
+                    <span style={{ fontSize: 12, color: "var(--muted2)" }}>{t("dashboard.uncategorized")}</span>
                   ) : (
                     skill.categoryIds.map((catId) => {
                       const cat = categories.find((c) => c.id === catId);
                       if (!cat) return null;
+                      const localized = getLocalizedCategory(cat, t);
                       return (
                         <Badge key={catId} variant="custom"
                           style={{ background: `color-mix(in oklch, ${cat.color} 14%, transparent)`, color: cat.color }}
                         >
-                          {cat.icon} {cat.name}
+                          {cat.icon} {localized.name}
                         </Badge>
                       );
                     })
                   )}
                 </div>
                 <button className="btn btn-sm btn-ghost" onClick={onEditCategories}>
-                  编辑分类
+                  {t("dashboard.editCategories")}
                 </button>
               </>
             ) : (
@@ -794,6 +855,7 @@ function SkillDetailDrawer({
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
                   {categories.map((cat) => {
                     const checked = draftCategoryIds.includes(cat.id);
+                    const localized = getLocalizedCategory(cat, t);
                     return (
                       <label
                         key={cat.id}
@@ -810,8 +872,8 @@ function SkillDetailDrawer({
                           }}
                         />
                         <span>{cat.icon}</span>
-                        <span>{cat.name}</span>
-                        <span style={{ fontSize: 11, color: "var(--muted2)", marginLeft: "auto" }}>{cat.desc}</span>
+                        <span>{localized.name}</span>
+                        <span style={{ fontSize: 11, color: "var(--muted2)", marginLeft: "auto" }}>{localized.desc}</span>
                       </label>
                     );
                   })}
@@ -822,13 +884,13 @@ function SkillDetailDrawer({
                     disabled={uiLocked}
                     onClick={onSaveCategories}
                   >
-                    {isSavingCategory ? "保存中……" : "保存"}
+                    {isSavingCategory ? t("common.saving") : t("common.save")}
                   </button>
                   <button
                     className="btn btn-sm btn-ghost"
                     onClick={onCancelCategoryEdit}
                   >
-                    取消
+                    {t("common.cancel")}
                   </button>
                 </div>
               </>
@@ -837,9 +899,9 @@ function SkillDetailDrawer({
         </div>
 
         {/* Description */}
-        {skillContent && skillContent !== "未找到 SKILL.md。" && (
+        {skillContent && skillContent !== t("dashboard.notFoundSkillMd") && (
           <div className="detail-card">
-            <div className="detail-card-label">Skill 内容</div>
+            <div className="detail-card-label">{t("dashboard.skillContent")}</div>
             <pre
               style={{
                 marginTop: 8,
@@ -865,7 +927,7 @@ function SkillDetailDrawer({
             onClick={onDeleteClick}
             disabled={uiLocked}
           >
-            <Trash2 size={12} /> 删除 Skill
+            <Trash2 size={12} /> {t("dashboard.deleteSkill")}
           </button>
         </div>
       </div>
@@ -890,6 +952,8 @@ function SkillCard({
   onSync: (e: React.MouseEvent) => void;
   isSyncing: boolean;
 }) {
+  const { t } = useI18n();
+
   return (
     <div className="skill-card" onClick={onClick}>
       <div className="skill-card-header">
@@ -901,18 +965,19 @@ function SkillCard({
           <div className="skill-card-desc">{row.description}</div>
           <div className="skill-card-tags">
             {row.isCustom ? (
-              <Badge variant="self">自研</Badge>
+              <Badge variant="self">{t("dashboard.custom")}</Badge>
             ) : (
-              <Badge variant="opensource">开源</Badge>
+              <Badge variant="opensource">{t("dashboard.opensource")}</Badge>
             )}
             {row.categoryIds.map((catId) => {
               const cat = categories.find((c) => c.id === catId);
               if (!cat) return null;
+              const localized = getLocalizedCategory(cat, t);
               return (
                 <Badge key={catId} variant="custom"
                   style={{ background: `color-mix(in oklch, ${cat.color} 14%, transparent)`, color: cat.color }}
                 >
-                  {cat.icon} {cat.name}
+                  {cat.icon} {localized.name}
                 </Badge>
               );
             })}
@@ -920,16 +985,22 @@ function SkillCard({
         </div>
       </div>
       <div className="skill-card-footer">
-        <div className="skill-card-agents">
-          {row.cells.map((cell) => (
-            <AgentIcon key={cell.agentId} agentId={cell.agentId} status={cell.displayStatus} size={18} />
-          ))}
+        <div className="skill-card-footer-main">
+          <div className="skill-card-agents">
+            {row.cells.map((cell) => (
+              <AgentIcon key={cell.agentId} agentId={cell.agentId} status={cell.displayStatus} size={18} />
+            ))}
+          </div>
+          <div className="skill-usage-meta" title={t("dashboard.usage.title", { last: formatLastUsed(row.usage.lastUsedAt, t) })}>
+            <Activity size={12} />
+            <span>{formatUsageMeta(row, t)}</span>
+          </div>
         </div>
         <button
           className={"btn-icon-sync" + (isSyncing ? " syncing" : "")}
           onClick={onSync}
           disabled={isSyncing || !row.canSync}
-          title="同步到 Agent"
+          title={t("dashboard.syncToAgent")}
         >
           <RefreshCw size={14} />
         </button>
@@ -955,6 +1026,8 @@ function SkillRow({
   onSync: (e: React.MouseEvent) => void;
   isSyncing: boolean;
 }) {
+  const { t } = useI18n();
+
   return (
     <div className="skill-row" onClick={onClick}>
       <div className="skill-row-icon">
@@ -966,21 +1039,26 @@ function SkillRow({
       </div>
       <div className="skill-row-tags">
         {row.isCustom ? (
-          <Badge variant="self">自研</Badge>
+          <Badge variant="self">{t("dashboard.custom")}</Badge>
         ) : (
-          <Badge variant="opensource">开源</Badge>
+          <Badge variant="opensource">{t("dashboard.opensource")}</Badge>
         )}
         {row.categoryIds.map((catId) => {
           const cat = categories.find((c) => c.id === catId);
           if (!cat) return null;
+          const localized = getLocalizedCategory(cat, t);
           return (
             <Badge key={catId} variant="custom"
               style={{ background: `color-mix(in oklch, ${cat.color} 14%, transparent)`, color: cat.color }}
             >
-              {cat.icon} {cat.name}
+              {cat.icon} {localized.name}
             </Badge>
           );
         })}
+      </div>
+      <div className="skill-row-meta" title={t("dashboard.usage.title", { last: formatLastUsed(row.usage.lastUsedAt, t) })}>
+        <Activity size={12} />
+        <span>{formatUsageMeta(row, t)}</span>
       </div>
       <div className="skill-row-agents">
         {row.cells.map((cell) => (
@@ -991,7 +1069,7 @@ function SkillRow({
         className={"btn-row-sync" + (isSyncing ? " syncing" : "")}
         onClick={onSync}
         disabled={isSyncing || !row.canSync}
-        title="同步到 Agent"
+        title={t("dashboard.syncToAgent")}
       >
         <RefreshCw size={13} />
       </button>

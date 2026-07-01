@@ -2,12 +2,15 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 export type SyncMode = "copy" | "symlink";
+export type Language = "zh" | "en";
+export type LanguagePreference = "system" | Language;
 export type InstructionAgentId = string;
 
 export type InstructionPathSettings = Partial<Record<InstructionAgentId, string>>;
 
 export type AppSettings = {
   syncMode: SyncMode;
+  language: LanguagePreference;
   instructionPaths: InstructionPathSettings;
 };
 
@@ -15,6 +18,7 @@ const SETTINGS_PATH = resolve(process.cwd(), "config", "settings.json");
 
 const DEFAULTS: AppSettings = {
   syncMode: "copy",
+  language: "system",
   instructionPaths: {},
 };
 
@@ -25,6 +29,7 @@ export async function readSettings(): Promise<AppSettings> {
     return {
       ...DEFAULTS,
       ...parsed,
+      language: normalizeLanguage(parsed.language),
       instructionPaths: normalizeInstructionPaths(parsed.instructionPaths),
     };
   } catch {
@@ -37,10 +42,15 @@ export async function writeSettings(settings: AppSettings): Promise<void> {
     SETTINGS_PATH,
     JSON.stringify({
       ...settings,
+      language: normalizeLanguage(settings.language),
       instructionPaths: normalizeInstructionPaths(settings.instructionPaths),
     }, null, 2) + "\n",
     "utf-8"
   );
+}
+
+function normalizeLanguage(language: unknown): LanguagePreference {
+  return language === "zh" || language === "en" || language === "system" ? language : "system";
 }
 
 function normalizeInstructionPaths(paths: unknown): InstructionPathSettings {

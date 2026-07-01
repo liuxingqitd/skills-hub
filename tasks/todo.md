@@ -1,3 +1,130 @@
+# 2026-07-01 系统内置分类标签多语言显示
+
+## Spec
+
+- 目标：切换到英文时，系统内置分类/标签显示英文；切回中文时显示中文。
+- 范围：首页分类筛选、Skill 卡片/列表/详情里的分类标签、设置页分类管理列表和删除确认标题。
+- 非目标：不翻译自定义分类，不改写用户的 `config/categories.json` 数据，不改变分类 id、关键词和 Skill 关联关系。
+- 设计方向：用内置分类 id 做翻译 key；`isPreset: true` 的系统分类走 i18n 显示，自定义分类继续显示原始 `name` / `desc`。
+
+## Tasks
+
+- [x] 增加内置分类 id 到中英文显示名/描述的字典项
+- [x] 增加分类显示本地化 helper，缺字典时回退原始数据
+- [x] 首页 Dashboard 使用本地化分类名/描述
+- [x] 设置页分类管理使用本地化分类名/描述
+- [x] 补充回归测试并运行验证
+- [x] 记录 Review / 复盘
+
+## Verify
+
+- 英文界面下，系统内置分类显示英文。
+- 中文界面下，系统内置分类显示中文。
+- 自定义分类保持用户创建时的原始文字。
+- 分类 id 与 Skill 绑定不变。
+
+## Review
+
+- 结果：为 `cat-search`、`cat-content`、`cat-dev-tools`、`cat-test`、`cat-devops` 等内置分类补充中英文 name/desc 字典。
+- 结果：新增 `getLocalizedCategory`，仅 `isPreset: true` 的系统分类会按当前语言显示；自定义分类保持原始数据。
+- 结果：首页分类筛选、Skill 卡片/列表/详情抽屉、分类编辑选择器已切换为本地化分类显示。
+- 结果：设置页分类管理列表和删除确认标题已切换为本地化分类显示。
+- 通过：`npm test -- src/lib/i18n.test.tsx src/components/settings/settings-page.test.tsx`（10 tests）
+- 通过：`npm test`（105 tests）
+- 通过：`npx tsc --noEmit`
+- 通过：`npm run build`
+- 通过：`git diff --check`
+
+# 2026-07-01 客户端中英文国际化与系统语言跟随
+
+## Spec
+
+- 目标：客户端界面支持中文和英文，并提供“跟随系统”模式；首次进入默认跟随用户系统/浏览器语言，用户也可以手动固定为中文或 English。
+- 语言识别：读取 `navigator.languages` / `navigator.language`，任一首选语言以 `zh` 开头时使用中文，否则使用英文。固定语言优先于系统语言。
+- 范围：客户端 UI 字典、语言偏好设置、设置页切换入口、`html lang` 更新、相关测试与验证。
+- 非目标：不翻译用户数据（Skill 名称、分类名、自定义 Agent 名称、规则文件内容、SKILL.md 内容），不引入第三方 i18n 框架，不改 URL 路由结构。
+- 设计方向：使用轻量内置字典和 React context；配置层保存 `system | zh | en`，其中旧的 `null` 语言偏好按 `system` 兼容读取。
+
+## Tasks
+
+- [x] 确认现有 i18n 代码与客户端硬编码文案覆盖范围
+- [x] 将语言设置从 `zh | en | null` 收敛为 `system | zh | en`，兼容旧配置
+- [x] 让 `I18nProvider` 在 system 模式下按浏览器语言解析，并监听 `languagechange`
+- [x] 在设置页增加“跟随系统”选项并保持现有中英文手动切换
+- [x] 补齐缺失字典项和客户端可见文案
+- [x] 补充设置 API、settings store、语言切换相关测试
+- [x] 运行测试、类型检查、构建和页面验证
+- [x] 记录 Review / 复盘
+
+## Verify
+
+- 未配置语言时，中文系统显示中文，非中文系统显示英文。
+- 选择“跟随系统”后，系统/浏览器语言变化时客户端语言会随之更新。
+- 手动选择中文或 English 后，不再被系统语言变化覆盖。
+- `document.documentElement.lang` 与实际显示语言一致。
+- 用户数据和文件内容保持原样，不被翻译或改写。
+- 一位资深工程师会批准：实现轻量、边界清晰，不为两种语言引入过重依赖。
+
+## Review
+
+- 结果：语言偏好从旧的 `null | zh | en` 收敛为 `system | zh | en`；旧配置缺失或非法值会兼容为 `system`。
+- 结果：`I18nProvider` 同时维护偏好语言和实际显示语言；`system` 模式下按 `navigator.languages` 解析，并监听 `languagechange` 自动更新。
+- 结果：设置页新增“跟随系统 / 中文 / English”三项，手动选择会持久化，固定语言不会被系统变化覆盖。
+- 结果：新增客户端 settings 读写封装；Web 运行时走 `/api/settings`，Tauri 桌面客户端走 `get_app_settings` / `set_app_settings` command。
+- 结果：Tauri settings 兼容 `language: null`、缺失和非法值，并规范化为 `system`。
+- 结果：补齐相关字典文案，`document.documentElement.lang` 会随实际显示语言更新。
+- 通过：`npm test -- src/lib/config/settings-store.test.ts app/api/settings/route.test.ts src/lib/i18n.test.tsx src/components/settings/settings-page.test.tsx src/components/editor/editor-page.test.tsx`（17 tests）
+- 通过：`npm test`（103 tests）
+- 通过：`npx tsc --noEmit`
+- 通过：`npm run build`
+- 通过：`cargo fmt --manifest-path src-tauri/Cargo.toml --check`
+- 通过：`cargo check --manifest-path src-tauri/Cargo.toml`
+- 通过：`git diff --check`
+- 通过：启动 `npm run dev`，`http://localhost:3000/settings` 和 `http://localhost:3000` 返回 200。
+
+# 2026-06-26 Skill 调用次数统计
+
+## Spec
+
+- 目标：为每个 Skill 增加本地调用次数统计能力，并在首页 Skill 卡片、列表和详情中展示总调用数、30 天调用数和最近使用时间。
+- 范围：新增独立 usage 数据层、JSONL 事件读取与聚合、Skill Board model 合并 usage summary、Web/Tauri board schema 兼容、基础 UI 展示与回归测试。
+- 非目标：本轮不自动解析 Codex/Claude/Cursor 历史日志，不做趋势图，不引入 SQLite，不改变 Skill 安装/同步判断。
+- 设计方向：使用 `data/skill-usage.jsonl` 作为 MVP 数据源；usage 层独立于 skill 扫描层，Board model 只消费聚合结果。
+
+## Tasks
+
+- [x] 为 usage 事件和 summary 增加类型定义
+- [x] 实现 JSONL usage store，容忍文件缺失和坏行
+- [x] 实现 usage summary 聚合，支持 total / 7d / 30d / lastUsedAt / byAgent
+- [x] 将 usage summary 合并到 `buildSkillBoardModel`
+- [x] 更新 Dashboard 卡片、列表和详情展示调用统计
+- [x] 让 Tauri `SkillBoardModel` 返回兼容的空 usage summary
+- [x] 补充单元测试和模型回归测试
+- [x] 运行测试、类型检查和必要构建验证
+
+## Verify
+
+- 没有 `data/skill-usage.jsonl` 时页面正常显示，所有 Skill 调用数为 0。
+- JSONL 中存在同名 Skill 事件时，Board row 能显示正确总数、30 天数量、最近使用时间和 agent 分布。
+- JSONL 中存在坏行时不影响其它事件统计。
+- Web 与 Tauri 返回的 `SkillBoardModel` schema 一致。
+- 一位资深工程师会批准：usage 作为独立数据层接入，不污染扫描、同步和安装状态逻辑。
+
+## Review
+
+- 结果：新增 `src/lib/usage` usage 数据层，支持读取/追加 `data/skill-usage.jsonl`，缺失文件返回空列表，坏行自动跳过。
+- 结果：新增 `POST /api/usage/record`，供本地 hook 或脚本上报 Skill 调用事件。
+- 结果：`buildSkillBoardModel` 将 usage summary 合并到每个 Skill row，统计 total / 7d / 30d / lastUsedAt / byAgent。
+- 结果：首页卡片、列表和详情抽屉展示调用统计；无事件时显示“未记录调用”。
+- 结果：Tauri 桌面端 `SkillBoardModel` 增加兼容的空 usage summary，避免 Web 类型与桌面运行时 schema 分叉。
+- 通过：`npm test`（94 tests）
+- 通过：`npx tsc --noEmit`
+- 通过：`npm run build`
+- 通过：`cargo fmt --manifest-path src-tauri/Cargo.toml --check`
+- 通过：`cargo check --manifest-path src-tauri/Cargo.toml`
+- 通过：`git diff --check`
+- 通过：浏览器打开 `http://localhost:3000`，首页显示 usage meta，详情抽屉显示“调用统计 / 总调用 / 最近使用”。
+
 # 2026-06-25 自定义 Agent 规则路径保存后仍缺失
 
 ## Spec
@@ -694,6 +821,8 @@
 - 通过：`npm test`
 - 通过：`npx tsc --noEmit`
 - 通过：`npm run build`
+- 通过：`cargo fmt --manifest-path src-tauri/Cargo.toml --check`
+- 通过：`cargo check --manifest-path src-tauri/Cargo.toml`
 - 通过：`git diff --check`
 - 通过：浏览器打开 `http://localhost:3003/settings`，确认 Agent 管理列表、路径检测状态和新增 Agent 弹窗正常渲染。
 
@@ -1250,3 +1379,39 @@
 - 通过：`npm run build`
 - 通过：`npm run build:desktop-web`
 - 验证：启动 `npm run dev` 后，`http://localhost:3000/instructions` 和 `/api/instructions` 返回 200；浏览器渲染检查未出现全局 Application error。
+# 2026-06-27 客户端英文支持
+
+## Spec
+
+- 目标：客户端支持中文 / English 手动切换；首次访问按浏览器语言自动初始化为中文或英文。
+- 范围：新增轻量 i18n provider、设置页语言选择、客户端主导航 / 首页 / 全局规则编辑器 / 设置页主要 UI 文案。
+- 非目标：本轮不做 URL locale、SEO 多语言路由、不翻译用户数据或本地配置数据（例如 Skill 名称、分类名称、Agent 名称）。
+- 设计方向：设置页只展示“中文 / English”；内部首次根据浏览器语言写入偏好，之后用户选择优先。使用字典对象和 React context，避免引入重型 i18n 框架。
+
+## Tasks
+
+- [x] 扩展 settings 类型，支持 `language: "zh" | "en"`，并兼容旧配置缺失。
+- [x] 新增客户端 i18n provider，首次按浏览器语言初始化并保存偏好。
+- [x] 在通用设置中加入中文 / English 语言切换。
+- [x] 接入 Sidebar、Settings、Dashboard、Editor 的主要可见文案。
+- [x] 补充 language 设置和设置页切换测试。
+- [x] 运行定向测试、类型检查和 diff 检查。
+
+## Verify
+
+- 首次访问时，中文浏览器显示中文，非中文浏览器显示英文。
+- 用户在设置页选择中文或 English 后立即生效，并持久化到 `/api/settings`。
+- 刷新后优先使用已保存语言，不再被浏览器语言覆盖。
+- 页面主要操作文案、空状态、toast 和错误提示能够随语言切换。
+- 一位资深工程师会批准：不引入不必要依赖，语言偏好与现有 settings 数据模型保持一致。
+
+## Review
+
+- 结果：`config/settings.json` 兼容新增 `language` 偏好；旧配置缺失时返回 `null`，客户端首次按浏览器语言初始化并写回。
+- 结果：新增 `I18nProvider` 和轻量字典，`AppShell` 下的 Sidebar、首页、全局规则编辑器、设置页主要文案随语言切换。
+- 结果：设置页“通用设置”新增中文 / English 两项选择，不暴露 Auto；用户选择后立即生效并持久化。
+- 通过：`npm test`（97 tests）
+- 通过：`npx tsc --noEmit`
+- 通过：`npm run build`
+- 通过：`git diff --check`
+- 限制：本轮不翻译本地数据（Skill 名称、分类名、Agent 名称）和 API/系统文件选择器错误文案；这些更适合后续错误码化或数据级多语言。

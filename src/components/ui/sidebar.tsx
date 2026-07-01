@@ -4,13 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutGrid, FileStack, Settings } from "lucide-react";
 
+import { useI18n } from "@/src/lib/i18n";
+
 const NAV_ITEMS = [
-  { href: "/" as const, label: "Skill 管理", icon: LayoutGrid, prefetch: false },
-  { href: "/instructions" as const, label: "全局规则", icon: FileStack },
+  { href: "/" as const, labelKey: "nav.skills", icon: LayoutGrid, prefetch: false },
+  { href: "/instructions" as const, labelKey: "nav.instructions", icon: FileStack },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { t } = useI18n();
 
   return (
     <aside className="sidebar">
@@ -36,7 +39,7 @@ export function Sidebar() {
               aria-current={isActive ? "page" : undefined}
             >
               <Icon size={16} />
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           );
         })}
@@ -48,7 +51,7 @@ export function Sidebar() {
           data-active={pathname === "/settings"}
         >
           <Settings size={16} />
-          设置
+          {t("nav.settings")}
         </Link>
       </div>
     </aside>

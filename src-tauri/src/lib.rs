@@ -19,9 +19,11 @@ pub fn run() {
             agents::set_skill_categories_command,
             agents::update_category,
             agents::validate_agent_path,
+            instructions::get_app_settings,
             instructions::get_instructions_model,
             instructions::get_instruction_paths,
             instructions::select_instruction_file,
+            instructions::set_app_settings,
             instructions::set_instruction_paths,
             instructions::update_instruction_asset
         ])
