@@ -1,3 +1,42 @@
+# 2026-07-02 分类筛选栏自适应换行
+
+## Spec
+
+- 目标：分类较多时，首页筛选栏随窗口宽度自动换行，不再要求用户左右滑动才能看到全部分类。
+- 范围：首页状态筛选栏与分类筛选栏的共享 `.category-filter` / `.category-chip` 样式。
+- 非目标：不改筛选逻辑、不改分类数据结构、不重做 Dashboard 视觉系统。
+- 设计方向：容器使用 `flex-wrap: wrap` 和稳定行列间距；chip 仍保持内部 `white-space: nowrap`，避免单个分类名被拆开。移除横向滚动依赖。
+
+## Tasks
+
+- [x] Review 本地未提交改动并撤销无关变更
+- [x] 定位分类筛选栏横向滚动根因
+- [x] 写入 CSS 布局回归测试
+- [x] 修改筛选栏样式为自适应换行
+- [x] 运行测试、类型检查和 diff 检查
+- [x] 记录 Review / 复盘
+
+## Verify
+
+- 分类数量较多时，筛选栏可换成多行显示。
+- 窗口变窄时，筛选栏重新排布而不是出现横向滑动依赖。
+- 单个分类 chip 内文字和计数不被拆散。
+- 一位资深工程师会批准：改动只触及共享筛选栏样式和针对该行为的回归测试。
+
+## Review
+
+- 清理：撤销了无关的 `config/settings.json` 格式化、`screenshots/dashboard.png` 变更、旧 screencast 任务写入，并删除未跟踪的 `screenshots/screencast-check/` 临时截图目录。
+- 根因：`.category-filter` 使用横向滚动容器，`.category-chip` 固定不收缩，分类多时只能左右滑动查看。
+- 结果：`.category-filter` 改为 `flex-wrap: wrap`，移除横向滚动条规则；`.category-chip` 保留内部 `white-space: nowrap` 并限制 `max-width: 100%`。
+- 结果：新增 `app/globals.test.ts`，锁定分类筛选栏必须换行且不再使用 `overflow-x: auto`。
+- 通过：使用 bundled Node `v24.14.0` 运行 `npm test -- app/globals.test.ts`（1 test）。
+- 通过：使用 bundled Node `v24.14.0` 运行 `npm test`（98 tests）。
+- 通过：`npx tsc --noEmit`。
+- 通过：`npm run build`。
+- 通过：`git diff --check`。
+- 限制：系统默认 Node `v21.5.0` 会让 Vitest 在加载 Vite 配置时触发 `ERR_REQUIRE_ESM`；改用 bundled Node 后测试正常。
+- 限制：本机已有 `http://localhost:3000` 进程，但返回 500；没有把开发服务切到其他端口，因为仓库约定固定 3000。
+
 # 2026-07-01 系统内置分类标签多语言显示
 
 ## Spec
