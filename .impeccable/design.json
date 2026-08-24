@@ -1,0 +1,230 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-24T06:13:49Z",
+  "title": "Design System: Skills Hub",
+  "extensions": {
+    "colorMeta": {
+      "background": {
+        "role": "neutral",
+        "displayName": "冷雾背景",
+        "canonical": "oklch(97.5% 0.004 240)",
+        "tonalRamp": ["oklch(15% 0.004 240)", "oklch(27% 0.004 240)", "oklch(39% 0.004 240)", "oklch(51% 0.004 240)", "oklch(63% 0.004 240)", "oklch(75% 0.004 240)", "oklch(87% 0.004 240)", "oklch(97.5% 0.004 240)"]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "纯白工作面",
+        "canonical": "oklch(100% 0 0)",
+        "tonalRamp": ["oklch(15% 0 0)", "oklch(27% 0 0)", "oklch(39% 0 0)", "oklch(51% 0 0)", "oklch(63% 0 0)", "oklch(75% 0 0)", "oklch(87% 0 0)", "oklch(100% 0 0)"]
+      },
+      "surface-subtle": {
+        "role": "neutral",
+        "displayName": "浅冷雾层",
+        "canonical": "oklch(96% 0.004 240)",
+        "tonalRamp": ["oklch(15% 0.004 240)", "oklch(27% 0.004 240)", "oklch(39% 0.004 240)", "oklch(51% 0.004 240)", "oklch(63% 0.004 240)", "oklch(75% 0.004 240)", "oklch(87% 0.004 240)", "oklch(96% 0.004 240)"]
+      },
+      "surface-muted": {
+        "role": "neutral",
+        "displayName": "沉静冷灰层",
+        "canonical": "oklch(93% 0.006 240)",
+        "tonalRamp": ["oklch(15% 0.006 240)", "oklch(27% 0.006 240)", "oklch(39% 0.006 240)", "oklch(51% 0.006 240)", "oklch(63% 0.006 240)", "oklch(75% 0.006 240)", "oklch(84% 0.006 240)", "oklch(93% 0.006 240)"]
+      },
+      "text-primary": {
+        "role": "neutral",
+        "displayName": "墨黑文本",
+        "canonical": "oklch(20% 0.02 240)",
+        "tonalRamp": ["oklch(15% 0.02 240)", "oklch(20% 0.02 240)", "oklch(32% 0.02 240)", "oklch(44% 0.02 240)", "oklch(56% 0.02 240)", "oklch(68% 0.02 240)", "oklch(82% 0.02 240)", "oklch(95% 0.02 240)"]
+      },
+      "text-secondary": {
+        "role": "neutral",
+        "displayName": "中灰文本",
+        "canonical": "oklch(50% 0.018 240)",
+        "tonalRamp": ["oklch(15% 0.018 240)", "oklch(27% 0.018 240)", "oklch(39% 0.018 240)", "oklch(50% 0.018 240)", "oklch(62% 0.018 240)", "oklch(74% 0.018 240)", "oklch(86% 0.018 240)", "oklch(95% 0.018 240)"]
+      },
+      "text-tertiary": {
+        "role": "neutral",
+        "displayName": "淡灰文本",
+        "canonical": "oklch(62% 0.014 240)",
+        "tonalRamp": ["oklch(15% 0.014 240)", "oklch(27% 0.014 240)", "oklch(39% 0.014 240)", "oklch(50% 0.014 240)", "oklch(62% 0.014 240)", "oklch(74% 0.014 240)", "oklch(86% 0.014 240)", "oklch(95% 0.014 240)"]
+      },
+      "border-subtle": {
+        "role": "neutral",
+        "displayName": "细雾边框",
+        "canonical": "oklch(90% 0.006 240)",
+        "tonalRamp": ["oklch(15% 0.006 240)", "oklch(27% 0.006 240)", "oklch(39% 0.006 240)", "oklch(51% 0.006 240)", "oklch(63% 0.006 240)", "oklch(75% 0.006 240)", "oklch(82% 0.006 240)", "oklch(90% 0.006 240)"]
+      },
+      "border-strong": {
+        "role": "neutral",
+        "displayName": "强调边框",
+        "canonical": "oklch(85% 0.008 240)",
+        "tonalRamp": ["oklch(15% 0.008 240)", "oklch(27% 0.008 240)", "oklch(39% 0.008 240)", "oklch(51% 0.008 240)", "oklch(63% 0.008 240)", "oklch(75% 0.008 240)", "oklch(85% 0.008 240)", "oklch(95% 0.008 240)"]
+      },
+      "primary": {
+        "role": "primary",
+        "displayName": "同步青绿",
+        "canonical": "oklch(56% 0.12 170)",
+        "tonalRamp": ["oklch(15% 0.12 170)", "oklch(25% 0.12 170)", "oklch(35% 0.12 170)", "oklch(45% 0.12 170)", "oklch(56% 0.12 170)", "oklch(68% 0.12 170)", "oklch(82% 0.12 170)", "oklch(95% 0.12 170)"]
+      },
+      "primary-strong": {
+        "role": "primary",
+        "displayName": "深同步青绿",
+        "canonical": "oklch(48% 0.14 170)",
+        "tonalRamp": ["oklch(15% 0.14 170)", "oklch(25% 0.14 170)", "oklch(35% 0.14 170)", "oklch(48% 0.14 170)", "oklch(58% 0.14 170)", "oklch(70% 0.14 170)", "oklch(83% 0.14 170)", "oklch(95% 0.14 170)"]
+      },
+      "custom-warm": {
+        "role": "secondary",
+        "displayName": "自研暖金",
+        "canonical": "oklch(62% 0.06 55)",
+        "tonalRamp": ["oklch(15% 0.06 55)", "oklch(27% 0.06 55)", "oklch(39% 0.06 55)", "oklch(51% 0.06 55)", "oklch(62% 0.06 55)", "oklch(74% 0.06 55)", "oklch(86% 0.06 55)", "oklch(95% 0.06 55)"]
+      },
+      "success": {
+        "role": "tertiary",
+        "displayName": "成功绿",
+        "canonical": "oklch(55% 0.12 145)",
+        "tonalRamp": ["oklch(15% 0.12 145)", "oklch(25% 0.12 145)", "oklch(35% 0.12 145)", "oklch(45% 0.12 145)", "oklch(55% 0.12 145)", "oklch(68% 0.12 145)", "oklch(82% 0.12 145)", "oklch(95% 0.12 145)"]
+      },
+      "warning": {
+        "role": "tertiary",
+        "displayName": "警示琥珀",
+        "canonical": "oklch(60% 0.14 75)",
+        "tonalRamp": ["oklch(15% 0.14 75)", "oklch(25% 0.14 75)", "oklch(35% 0.14 75)", "oklch(47% 0.14 75)", "oklch(60% 0.14 75)", "oklch(72% 0.14 75)", "oklch(84% 0.14 75)", "oklch(95% 0.14 75)"]
+      },
+      "error": {
+        "role": "tertiary",
+        "displayName": "错误赤褐",
+        "canonical": "oklch(52% 0.14 30)",
+        "tonalRamp": ["oklch(15% 0.14 30)", "oklch(25% 0.14 30)", "oklch(35% 0.14 30)", "oklch(43% 0.14 30)", "oklch(52% 0.14 30)", "oklch(66% 0.14 30)", "oklch(81% 0.14 30)", "oklch(95% 0.14 30)"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Dashboard Display", "purpose": "Dashboard totals and high-priority numeric values." },
+      "headline": { "displayName": "Page Headline", "purpose": "Page and settings-panel headings." },
+      "title": { "displayName": "Section Title", "purpose": "Section and component hierarchy." },
+      "body": { "displayName": "Interface Body", "purpose": "Default product copy and descriptions." },
+      "label": { "displayName": "Operational Label", "purpose": "Compact uppercase labels and metadata headings." },
+      "mono": { "displayName": "Filesystem Mono", "purpose": "Paths, filenames, editor content, and code-like facts." }
+    },
+    "shadows": [
+      { "name": "ambient-lift", "value": "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03)", "purpose": "Hover feedback for cards and list rows." },
+      { "name": "overlay-lift", "value": "0 2px 8px rgba(0, 0, 0, 0.06), 0 12px 32px rgba(0, 0, 0, 0.05)", "purpose": "Modals, drawers, confirmations, and toasts." },
+      { "name": "agent-tile-lift", "value": "0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04)", "purpose": "Keeps small white agent icons legible inside dense rows." }
+    ],
+    "motion": [
+      { "name": "state-fast", "value": "150ms ease", "purpose": "Color, border, background, opacity, and hover-state transitions." },
+      { "name": "press-fast", "value": "100ms ease", "purpose": "Button press compression to 97%." },
+      { "name": "feedback-enter", "value": "300ms ease", "purpose": "Toast entrance from reduced opacity and a 12px downward offset." },
+      { "name": "loading-spin", "value": "800ms linear infinite", "purpose": "Synchronization and loading indicators." }
+    ],
+    "breakpoints": [
+      { "name": "editor-compact", "value": "600px" },
+      { "name": "mobile", "value": "640px" },
+      { "name": "detail-stack", "value": "700px" },
+      { "name": "editor-rail", "value": "800px" },
+      { "name": "shell-compact", "value": "900px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary synchronization or confirmation action.",
+      "html": "<button class=\"ds-btn-primary\">SYNC ALL</button>",
+      "css": ".ds-btn-primary { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border:0; border-radius:var(--radius-sm, 8px); background:var(--accent, oklch(56% 0.12 170)); color:#fff; font:600 13px/1.2 var(--font, system-ui, sans-serif); transition:background 150ms ease, transform 100ms ease; cursor:pointer; } .ds-btn-primary:hover { background:var(--accent2, oklch(48% 0.14 170)); } .ds-btn-primary:focus-visible { outline:2px solid var(--accent2, oklch(48% 0.14 170)); outline-offset:2px; } .ds-btn-primary:active { transform:scale(0.97); }"
+    },
+    {
+      "name": "Soft Button",
+      "kind": "button",
+      "refersTo": "button-soft",
+      "description": "Secondary action that remains part of the primary workflow.",
+      "html": "<button class=\"ds-btn-soft\">INSTALL</button>",
+      "css": ".ds-btn-soft { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border:0; border-radius:var(--radius-sm, 8px); background:color-mix(in oklch, var(--accent, oklch(56% 0.12 170)) 10%, transparent); color:var(--accent2, oklch(48% 0.14 170)); font:600 13px/1.2 var(--font, system-ui, sans-serif); transition:background 150ms ease, transform 100ms ease; cursor:pointer; } .ds-btn-soft:hover { background:color-mix(in oklch, var(--accent, oklch(56% 0.12 170)) 18%, transparent); } .ds-btn-soft:focus-visible { outline:2px solid var(--accent, oklch(56% 0.12 170)); outline-offset:2px; } .ds-btn-soft:active { transform:scale(0.97); }"
+    },
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "refersTo": "search-field",
+      "description": "Compact global search field for filtering skills.",
+      "html": "<label class=\"ds-search\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"11\" cy=\"11\" r=\"8\"></circle><path d=\"m21 21-4.3-4.3\"></path></svg><input type=\"search\" placeholder=\"Search skills…\"></label>",
+      "css": ".ds-search { display:flex; align-items:center; gap:8px; width:320px; height:36px; padding:0 12px; border:1px solid var(--border, oklch(90% 0.006 240)); border-radius:var(--radius-sm, 8px); background:var(--surface2, oklch(96% 0.004 240)); transition:border-color 150ms ease; } .ds-search:focus-within { border-color:var(--accent, oklch(56% 0.12 170)); } .ds-search svg { width:16px; height:16px; fill:none; stroke:var(--muted2, oklch(62% 0.014 240)); stroke-width:2; stroke-linecap:round; } .ds-search input { flex:1; min-width:0; border:0; outline:0; background:transparent; color:var(--fg, oklch(20% 0.02 240)); font:400 13px/1.5 var(--font, system-ui, sans-serif); }"
+    },
+    {
+      "name": "Active Navigation Item",
+      "kind": "nav",
+      "refersTo": "navigation-active",
+      "description": "Selected destination in the sidebar or local settings rail.",
+      "html": "<a class=\"ds-nav-item is-active\" href=\"#\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"></rect><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"></rect><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"></rect><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"></rect></svg>SKILL MANAGEMENT</a>",
+      "css": ".ds-nav-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:var(--radius-sm, 8px); color:var(--muted, oklch(50% 0.018 240)); font:500 14px/1.2 var(--font, system-ui, sans-serif); text-decoration:none; transition:background 150ms ease, color 150ms ease; } .ds-nav-item svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.8; } .ds-nav-item:hover { background:var(--surface2, oklch(96% 0.004 240)); color:var(--fg, oklch(20% 0.02 240)); } .ds-nav-item.is-active { background:color-mix(in oklch, var(--accent, oklch(56% 0.12 170)) 10%, transparent); color:var(--accent2, oklch(48% 0.14 170)); font-weight:600; } .ds-nav-item:focus-visible { outline:2px solid var(--accent, oklch(56% 0.12 170)); outline-offset:2px; }"
+    },
+    {
+      "name": "Category Filter Chip",
+      "kind": "chip",
+      "refersTo": "filter-chip",
+      "description": "Wrapping dashboard filter with selected and count states.",
+      "html": "<button class=\"ds-filter-chip is-active\">ALL <span>26</span></button>",
+      "css": ".ds-filter-chip { display:inline-flex; align-items:center; gap:5px; padding:6px 14px; border:1px solid var(--border, oklch(90% 0.006 240)); border-radius:20px; background:var(--surface, #fff); color:var(--muted, oklch(50% 0.018 240)); font:500 12px/1.2 var(--font, system-ui, sans-serif); white-space:nowrap; transition:background 150ms ease, border-color 150ms ease, color 150ms ease; cursor:pointer; } .ds-filter-chip:hover { border-color:var(--border2, oklch(85% 0.008 240)); color:var(--fg, oklch(20% 0.02 240)); } .ds-filter-chip.is-active { border-color:var(--accent, oklch(56% 0.12 170)); background:var(--accent, oklch(56% 0.12 170)); color:#fff; } .ds-filter-chip span { font-size:10px; opacity:0.7; } .ds-filter-chip:focus-visible { outline:2px solid var(--accent2, oklch(48% 0.14 170)); outline-offset:2px; }"
+    },
+    {
+      "name": "Statistic Card",
+      "kind": "card",
+      "description": "At-a-glance operational metric with semantic change text.",
+      "html": "<article class=\"ds-stat-card\"><div class=\"ds-stat-label\">ALL SKILLS</div><strong>26</strong><div class=\"ds-stat-change\">↑ 20 synced</div></article>",
+      "css": ".ds-stat-card { width:240px; padding:20px; border:1px solid var(--border, oklch(90% 0.006 240)); border-radius:var(--radius, 14px); background:var(--surface, #fff); color:var(--fg, oklch(20% 0.02 240)); transition:box-shadow 150ms ease; } .ds-stat-card:hover { box-shadow:var(--shadow, 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03)); } .ds-stat-label { margin-bottom:4px; color:var(--muted2, oklch(62% 0.014 240)); font:600 12px/1 var(--font, system-ui, sans-serif); letter-spacing:0.06em; } .ds-stat-card strong { display:block; font:700 32px/1 var(--font-display, system-ui, sans-serif); letter-spacing:-0.02em; } .ds-stat-change { margin-top:4px; color:var(--good, oklch(55% 0.12 145)); font:400 12px/1.5 var(--font, system-ui, sans-serif); }"
+    },
+    {
+      "name": "Skill Card",
+      "kind": "card",
+      "refersTo": "skill-card",
+      "description": "Inspectable skill summary used in the dashboard grid.",
+      "html": "<article class=\"ds-skill-card\"><header><span class=\"ds-skill-icon\">S</span><div><h3>skill-name</h3><p>A concise description of what the skill enables.</p></div></header><footer><span class=\"ds-badge\">OPEN SOURCE</span><span class=\"ds-meta\">3 agents</span></footer></article>",
+      "css": ".ds-skill-card { width:320px; padding:18px; border:1px solid var(--border, oklch(90% 0.006 240)); border-radius:var(--radius, 14px); background:var(--surface, #fff); color:var(--fg, oklch(20% 0.02 240)); transition:border-color 150ms ease, box-shadow 150ms ease; } .ds-skill-card:hover { border-color:var(--border2, oklch(85% 0.008 240)); box-shadow:var(--shadow, 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03)); } .ds-skill-card header { display:flex; align-items:flex-start; gap:14px; margin-bottom:10px; } .ds-skill-icon { display:grid; place-items:center; flex:0 0 40px; height:40px; border-radius:var(--radius-sm, 8px); background:color-mix(in oklch, var(--accent, oklch(56% 0.12 170)) 12%, transparent); font:600 18px/1 var(--font-display, system-ui, sans-serif); } .ds-skill-card h3 { margin:0; font:600 15px/1.2 var(--font-display, system-ui, sans-serif); } .ds-skill-card p { margin:3px 0 0; color:var(--muted, oklch(50% 0.018 240)); font:400 13px/1.5 var(--font, system-ui, sans-serif); } .ds-skill-card footer { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:14px; padding-top:12px; border-top:1px solid var(--border, oklch(90% 0.006 240)); } .ds-badge { padding:3px 8px; border-radius:6px; background:color-mix(in oklch, var(--good, oklch(55% 0.12 145)) 12%, transparent); color:oklch(45% 0.12 145); font:600 11px/1.2 var(--font, system-ui, sans-serif); } .ds-meta { color:var(--muted2, oklch(62% 0.014 240)); font:400 11px/1.2 var(--font, system-ui, sans-serif); }"
+    },
+    {
+      "name": "Installed Status Badge",
+      "kind": "custom",
+      "description": "Explicit per-agent installation status pill.",
+      "html": "<span class=\"ds-status\" data-status=\"installed\">INSTALLED</span>",
+      "css": ".ds-status { display:inline-flex; align-items:center; min-height:30px; padding:0 10px; border:1px solid var(--border, oklch(90% 0.006 240)); border-radius:999px; font:500 11.5px/1 var(--font, system-ui, sans-serif); letter-spacing:0.02em; } .ds-status[data-status=\"installed\"] { border-color:rgba(21,128,61,0.16); background:rgba(21,128,61,0.1); color:var(--good, oklch(55% 0.12 145)); }"
+    },
+    {
+      "name": "Modal Surface",
+      "kind": "custom",
+      "description": "Floating task surface for installation and settings forms.",
+      "html": "<section class=\"ds-modal\" role=\"dialog\" aria-labelledby=\"ds-modal-title\"><h2 id=\"ds-modal-title\">Install skill</h2><p>Enter a repository URL or local path.</p><input aria-label=\"Skill source\" placeholder=\"Repository or path\"><div><button class=\"ds-modal-cancel\">CANCEL</button><button class=\"ds-modal-confirm\">INSTALL</button></div></section>",
+      "css": ".ds-modal { width:420px; max-width:90%; padding:28px; border-radius:var(--radius, 14px); background:var(--surface, #fff); color:var(--fg, oklch(20% 0.02 240)); box-shadow:var(--shadow-lg, 0 2px 8px rgba(0,0,0,0.06), 0 12px 32px rgba(0,0,0,0.05)); font-family:var(--font, system-ui, sans-serif); } .ds-modal h2 { margin:0 0 4px; font:700 16px/1 var(--font-display, system-ui, sans-serif); } .ds-modal p { margin:0 0 16px; color:var(--muted2, oklch(62% 0.014 240)); font-size:13px; } .ds-modal input { width:100%; height:40px; padding:0 12px; border:1px solid var(--border, oklch(90% 0.006 240)); border-radius:var(--radius-sm, 8px); outline:0; background:var(--surface2, oklch(96% 0.004 240)); color:var(--fg, oklch(20% 0.02 240)); font-size:13px; } .ds-modal input:focus { border-color:var(--accent, oklch(56% 0.12 170)); } .ds-modal > div { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; } .ds-modal button { padding:8px 16px; border:0; border-radius:var(--radius-sm, 8px); font:600 13px/1.2 var(--font, system-ui, sans-serif); cursor:pointer; } .ds-modal-cancel { background:transparent; color:var(--muted, oklch(50% 0.018 240)); } .ds-modal-cancel:hover { background:var(--surface2, oklch(96% 0.004 240)); color:var(--fg, oklch(20% 0.02 240)); } .ds-modal-confirm { background:var(--accent, oklch(56% 0.12 170)); color:#fff; } .ds-modal-confirm:hover { background:var(--accent2, oklch(48% 0.14 170)); } .ds-modal button:focus-visible { outline:2px solid var(--accent, oklch(56% 0.12 170)); outline-offset:2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Agent Workbench｜Agent 工作台",
+    "overview": "Skills Hub should feel like a well-kept workbench for people who move between several AI agents: tools are close at hand, states are immediately legible, and nothing decorative competes with the next action. The atmosphere is light, friendly, and orderly, with generous cool-white surfaces and one disciplined sync-green accent.\n\nThe interface is compact enough for real operational density but avoids terminal austerity. Fine borders, calm neutral layers, and concise type create structure; refined, restrained components keep the product approachable without making it playful. The system remains flat at rest and earns depth only when interaction or overlay hierarchy requires it.",
+    "keyCharacteristics": [
+      "Cool, nearly white tonal layering with one sync-green accent.",
+      "Crisp borders and a two-radius shape system.",
+      "Compact desktop density with a comfortable 8–28px rhythm.",
+      "Flat at rest; ambient lift is reserved for hover and overlays.",
+      "Friendly, precise components with restrained motion and practical copy."
+    ],
+    "rules": [
+      { "name": "The Sync Green Rule", "body": "Synchronization green marks primary action, active selection, or confirmed product state; it does not become a large decorative field.", "section": "colors" },
+      { "name": "The Semantic Color Rule", "body": "Warm, success, warning, and error colors always carry explicit meaning and must be paired with text, iconography, or state labels.", "section": "colors" },
+      { "name": "The Role Clarity Rule", "body": "Display type identifies hierarchy, body type carries interface language, and mono type signals literal filesystem or code content; never swap these roles for decoration.", "section": "typography" },
+      { "name": "The Stable Rails Rule", "body": "Persistent navigation and file rails own fixed widths on desktop; content areas flex and scroll without shifting those anchors.", "section": "layout" },
+      { "name": "The Working Density Rule", "body": "Prefer compact repeated rows for comparison and modestly padded cards for inspection; do not inflate routine operational content into marketing-scale whitespace.", "section": "layout" },
+      { "name": "The Flat Workbench Rule", "body": "Resting work surfaces use border and tone; shadow means hover, floating feedback, or overlay hierarchy.", "section": "elevation" },
+      { "name": "The Nested Radius Rule", "body": "A nested control uses the 8px small radius inside a 14px parent surface; it must not equal or exceed the parent's visual roundness.", "section": "shapes" }
+    ],
+    "dos": [
+      "Do reserve synchronization green for primary actions, active selections, and confirmed workflow state.",
+      "Do use thin borders and cool-neutral layer changes as the first method of grouping content.",
+      "Do preserve the 8px control radius inside 14px cards and panels.",
+      "Do use Avenir Next for hierarchy, the system stack for interface copy, and mono only for literal technical content.",
+      "Do keep repeated operational rows compact and ensure status remains understandable through labels or icons as well as color."
+    ],
+    "donts": [
+      "Don't apply resting shadows to every card or row; elevation is interaction and overlay feedback.",
+      "Don't turn synchronization green into a large decorative background or introduce competing structural accent hues.",
+      "Don't use warning, success, error, or custom-skill colors without a semantic state or category.",
+      "Don't replace the established cool-white surfaces with gradients or ornamental textures as a default treatment.",
+      "Don't stretch routine dashboard copy or controls into oversized marketing typography and spacing."
+    ]
+  }
+}
