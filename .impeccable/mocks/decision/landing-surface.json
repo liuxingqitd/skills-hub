@@ -1,0 +1,43 @@
+{
+  "title": "选择 Skills Hub 落地页结构",
+  "question": "三种方案都沿用现有的冷白工作台与同步青绿，只改变访客理解产品的路径。请选择你想继续实现的结构。",
+  "options": [
+    {
+      "id": "workflow-rail",
+      "label": "扫描、比较、同步",
+      "kicker": "THE ROLL",
+      "lineage": "本地工具的连续工作流",
+      "thesis": "把最核心的三步操作铺成一条从混乱到一致的可视化轨道。",
+      "palette": ["#F6F8F8", "#FFFFFF", "#189A77", "#1B2524"],
+      "materials": ["冷白工作面", "细线状态轨道", "本地文件标签"],
+      "viewport": "左侧一句明确价值主张，右侧是一条从多个 agent 目录汇入统一同步状态的连续工作流。",
+      "risk": "流程叙事很清楚，但首屏的产品界面全貌会稍晚出现。",
+      "comp": ".impeccable/mocks/decision/workflow-rail.webp"
+    },
+    {
+      "id": "workbench-cinema",
+      "label": "一张会呼吸的工作台",
+      "lineage": "开发者桌面产品首屏",
+      "thesis": "让真实仪表盘成为主角，文案像工具标签一样围绕它展开。",
+      "palette": ["#F7F9F9", "#FFFFFF", "#15936F", "#172321"],
+      "materials": ["桌面窗口", "状态芯片", "浅灰检查格"],
+      "viewport": "导航和主张保持克制，一张大幅 Skills Hub 工作台从首屏下沿浮出，直接展示跨 agent 状态。",
+      "risk": "最直观也最熟悉，需要靠精确构图避免沦为普通 SaaS hero。",
+      "comp": ".impeccable/mocks/decision/workbench-cinema.webp"
+    },
+    {
+      "id": "agent-orbit",
+      "label": "多个 Agent，一个源",
+      "lineage": "以本地源目录为中心的关系图",
+      "thesis": "用一眼能读懂的拓扑证明 Skills Hub 解决的是跨工具漂移，而不是又一个技能市场。",
+      "palette": ["#F6F8F7", "#FFFFFF", "#15936F", "#1A2523"],
+      "materials": ["目录节点", "同步连线", "Agent 图标砖"],
+      "viewport": "中央是唯一可信的 Skills 源，周围连接 Codex、Claude、Cursor、Trae，并在边缘露出实际控制台。",
+      "risk": "概念最鲜明，但必须尽快接回真实界面，避免像抽象架构图。",
+      "comp": ".impeccable/mocks/decision/agent-orbit.webp"
+    }
+  ],
+  "reroll": {"registers": ["safer", "bolder"]},
+  "buildPath": {"value": "comp", "toggle": true},
+  "steer": true
+}
