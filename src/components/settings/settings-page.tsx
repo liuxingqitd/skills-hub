@@ -15,6 +15,7 @@ import {
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
+import type { Route } from "next";
 
 import type { AgentDefinition, AgentPathValidation } from "@/src/types/agents";
 import type { Category } from "@/src/types/categories";
@@ -287,7 +288,7 @@ export function SettingsPage() {
       {/* Top bar */}
       <div className="topbar">
         <div className="topbar-left">
-          <Link href="/" className="btn-back">
+          <Link href={"/dashboard" as Route} className="btn-back">
             <ArrowLeft size={16} /> {t("common.back")}
           </Link>
           <span className="topbar-title">{t("settings.title")}</span>

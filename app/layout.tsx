@@ -4,9 +4,11 @@ import "./globals.css";
 import { AppShell } from "@/src/components/app-shell";
 
 export const metadata: Metadata = {
-  title: "技能中心",
-  description: "一个桌面式工作区，统一管理技能安装以及 Claude Code / Codex 全局规则"
+  title: "Skills Hub — 统一管理所有 Agent Skills",
+  description: "本地优先的 AI agent skills 管理工作台：浏览、比较、同步技能，并统一维护全局规则。"
 };
+
+const isDesktopBuild = process.env.SKILLS_HUB_DESKTOP === "1";
 
 export default function RootLayout({
   children
@@ -16,7 +18,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <body>
-        <AppShell>{children}</AppShell>
+        <AppShell isDesktopBuild={isDesktopBuild}>{children}</AppShell>
       </body>
     </html>
   );

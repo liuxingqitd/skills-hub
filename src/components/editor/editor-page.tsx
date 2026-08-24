@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, FileText, LoaderCircle, Save } from "lucide-react";
 import Link from "next/link";
+import type { Route } from "next";
 
 import type { InstructionsPageModel } from "@/src/types/instructions";
 import type { InstructionPathSettings } from "@/src/lib/config/settings-store";
@@ -162,7 +163,7 @@ export function EditorPage() {
       {/* Top bar */}
       <div className="topbar">
         <div className="topbar-left">
-          <Link href="/" className="btn-back">
+          <Link href={"/dashboard" as Route} className="btn-back">
             <ArrowLeft size={16} /> {t("common.back")}
           </Link>
           <span className="topbar-title">{t("editor.title")}</span>

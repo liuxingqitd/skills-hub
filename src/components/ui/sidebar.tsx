@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import type { Route } from "next";
 import { usePathname } from "next/navigation";
 import { LayoutGrid, FileStack, Settings } from "lucide-react";
 
 import { useI18n } from "@/src/lib/i18n";
 
 const NAV_ITEMS = [
-  { href: "/" as const, labelKey: "nav.skills", icon: LayoutGrid, prefetch: false },
+  { href: "/dashboard" as Route, labelKey: "nav.skills", icon: LayoutGrid, prefetch: false },
   { href: "/instructions" as const, labelKey: "nav.instructions", icon: FileStack },
 ];
 
