@@ -2006,6 +2006,29 @@ textarea {
   color: var(--fg);
 }
 
+.impeccable-contract {
+  display: contents;
+}
+
+html:has(.landing-page) {
+  scrollbar-color: color-mix(in oklch, var(--accent) 32%, var(--border2)) var(--surface2);
+  scrollbar-width: thin;
+}
+
+html:has(.landing-page)::-webkit-scrollbar {
+  width: 10px;
+}
+
+html:has(.landing-page)::-webkit-scrollbar-track {
+  background: var(--surface2);
+}
+
+html:has(.landing-page)::-webkit-scrollbar-thumb {
+  border: 2px solid var(--surface2);
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--accent) 32%, var(--border2));
+}
+
 .landing-page ::selection {
   background: color-mix(in oklch, var(--accent) 24%, white);
   color: var(--fg);
@@ -2146,9 +2169,9 @@ textarea {
 
 .landing-hero {
   width: min(var(--landing-max), calc(100% - 64px));
-  min-height: 850px;
+  min-height: 790px;
   margin: 0 auto;
-  padding: 68px 16px 0;
+  padding: 48px 16px 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -2157,38 +2180,37 @@ textarea {
 .landing-hero__copy {
   position: relative;
   z-index: 3;
-  width: min(760px, 70vw);
+  width: min(820px, 76vw);
 }
 
 .landing-hero h1 {
-  max-width: 15ch;
-  font: 700 clamp(44px, 5vw, 76px)/0.98 var(--font-display);
+  max-width: 12ch;
+  font: 700 clamp(58px, 6.7vw, 96px)/0.9 var(--font-display);
   letter-spacing: -0.035em;
   text-wrap: balance;
 }
 
-.landing-hero h1 span {
-  display: block;
-  margin-bottom: 20px;
-  font-size: 0.46em;
-  line-height: 1;
-  letter-spacing: -0.025em;
-  color: var(--accent2);
+.landing-hero__copy h2 {
+  max-width: 24ch;
+  margin-top: 20px;
+  font: 700 clamp(28px, 3vw, 42px)/1.08 var(--font-display);
+  letter-spacing: -0.03em;
+  text-wrap: balance;
 }
 
 .landing-hero__copy > p {
   max-width: 620px;
-  margin-top: 24px;
+  margin-top: 18px;
   color: var(--muted);
-  font-size: 17px;
-  line-height: 1.75;
+  font-size: 15px;
+  line-height: 1.65;
   text-wrap: pretty;
 }
 
 .landing-hero__actions {
   display: flex;
   gap: 10px;
-  margin-top: 28px;
+  margin-top: 22px;
 }
 
 .landing-cta {
@@ -2224,7 +2246,7 @@ textarea {
 }
 
 .landing-hero__facts {
-  margin-top: 18px;
+  margin-top: 14px;
   display: flex;
   gap: 18px;
   color: var(--muted);
@@ -2247,7 +2269,7 @@ textarea {
   width: calc(100% - 32px);
   height: 530px;
   min-height: 530px;
-  margin: 54px auto 0;
+  margin: 34px auto 0;
   overflow: hidden;
   border: 1px solid var(--border2);
   border-bottom: 0;
@@ -2394,6 +2416,18 @@ textarea {
   font-weight: 700;
 }
 
+.landing-preview-note {
+  position: absolute;
+  z-index: 2;
+  top: 10px;
+  right: 10px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: var(--surface2);
+  color: var(--muted);
+  font: 600 9px/1 var(--font);
+}
+
 .landing-table-tools {
   margin: 22px 0 10px;
   display: flex;
@@ -2446,6 +2480,7 @@ textarea {
 }
 
 .landing-skill-matrix {
+  position: relative;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -2602,13 +2637,6 @@ textarea {
   border-bottom: 1px solid var(--border);
 }
 
-.landing-principle__statement > p,
-.landing-feature__tag {
-  color: var(--accent2);
-  font-size: 12px;
-  font-weight: 700;
-}
-
 .landing-principle h2,
 .landing-section-heading h2,
 .landing-open-source h2 {
@@ -2710,7 +2738,9 @@ textarea {
 }
 
 .landing-sync-map {
+  position: relative;
   min-width: 0;
+  padding-top: 38px;
 }
 
 .landing-source-node {
@@ -2838,6 +2868,7 @@ textarea {
 }
 
 .landing-editor-preview {
+  position: relative;
   min-height: 300px;
   display: grid;
   grid-template-columns: 160px 1fr;
@@ -2901,6 +2932,7 @@ textarea {
 }
 
 .landing-install-preview {
+  position: relative;
   min-width: 0;
   padding: 20px;
   border: 1px solid var(--border2);
@@ -2939,9 +2971,11 @@ textarea {
   white-space: nowrap;
 }
 
-.landing-install-field button {
+.landing-install-action {
   align-self: stretch;
   padding: 0 14px;
+  display: grid;
+  place-items: center;
   background: var(--accent);
   color: white;
   font-size: 11px;
@@ -3066,7 +3100,7 @@ textarea {
   }
 
   .landing-hero {
-    min-height: 800px;
+    min-height: 760px;
     padding-left: 0;
     padding-right: 0;
   }
@@ -3119,7 +3153,7 @@ textarea {
 
   .landing-hero {
     min-height: auto;
-    padding-top: 54px;
+    padding-top: 44px;
   }
 
   .landing-hero__copy {
@@ -3127,13 +3161,15 @@ textarea {
   }
 
   .landing-hero h1 {
-    max-width: 12ch;
-    font-size: clamp(42px, 12vw, 64px);
-    line-height: 1.01;
+    max-width: 10ch;
+    font-size: clamp(54px, 15vw, 76px);
+    line-height: 0.92;
   }
 
-  .landing-hero h1 br {
-    display: none;
+  .landing-hero__copy h2 {
+    max-width: 15ch;
+    margin-top: 20px;
+    font-size: clamp(28px, 8.5vw, 38px);
   }
 
   .landing-hero__copy > p {
@@ -3262,13 +3298,32 @@ textarea {
   }
 
   .landing-product-window {
-    width: 760px;
-    height: 380px;
-    min-height: 380px;
+    width: calc(100% + 16px);
+    height: 410px;
+    min-height: 410px;
+    margin: 36px 0 0;
     animation: none;
-    transform: scale(0.54);
-    transform-origin: top left;
-    margin-bottom: -175px;
+    transform: none;
+  }
+
+  .landing-product-body {
+    grid-template-columns: minmax(690px, 1fr);
+  }
+
+  .landing-product-sidebar {
+    display: none;
+  }
+
+  .landing-workbench {
+    padding: 18px 16px;
+  }
+
+  .landing-workbench-heading h2 {
+    font-size: 20px;
+  }
+
+  .landing-table-tools {
+    margin-top: 16px;
   }
 
   .landing-principle h2,

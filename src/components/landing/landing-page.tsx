@@ -129,9 +129,9 @@ function ProductWindow() {
               <h2>Skills 工作台</h2>
               <p>比较源文件与每个 Agent 的安装状态</p>
             </div>
-            <button type="button" className="landing-sync-button" tabIndex={-1}>
+            <span className="landing-sync-button" aria-hidden="true">
               <RefreshCw size={14} aria-hidden="true" /> 同步所选
-            </button>
+            </span>
           </div>
 
           <div className="landing-table-tools">
@@ -146,6 +146,7 @@ function ProductWindow() {
           </div>
 
           <div className="landing-skill-matrix">
+            <span className="landing-preview-note">示意数据</span>
             <div className="landing-matrix-row landing-matrix-row--head">
               <div>Skill</div>
               {agents.map((agent) => (
@@ -215,7 +216,8 @@ export function LandingPage() {
 
       <section className="landing-hero" id="top">
         <div className="landing-hero__copy">
-          <h1><span>Skills Hub</span>把所有 Agent 的 Skills，<br />放回同一个工作台</h1>
+          <h1>Skills Hub</h1>
+          <h2>把所有 Agent 的 Skills，放回同一个工作台</h2>
           <p>
             在一个本地工作台中浏览、比较与同步 Skills。文件系统就是数据源，
             每次差异和变更都清楚可见。
@@ -250,7 +252,6 @@ export function LandingPage() {
 
       <section className="landing-principle" id="local-first">
         <div className="landing-principle__statement">
-          <p>不是另一个云端技能库</p>
           <h2>你的文件，始终是唯一可信源。</h2>
         </div>
         <div className="landing-principle__detail">
@@ -276,7 +277,6 @@ export function LandingPage() {
 
         <article className="landing-feature landing-feature--sync">
           <div className="landing-feature__copy">
-            <span className="landing-feature__tag">同步状态</span>
             <h3>先比较，再改变。</h3>
             <p>
               同步、缺失、漂移、冲突和孤立副本被清楚区分。缺失或漂移可修复，
@@ -284,6 +284,7 @@ export function LandingPage() {
             </p>
           </div>
           <div className="landing-sync-map" aria-label="从源 Skill 同步到多个 Agent 的示意图">
+            <span className="landing-preview-note">示意数据</span>
             <div className="landing-source-node">
               <span className="landing-source-node__icon"><FileCode2 size={20} /></span>
               <span><strong>skill-creator</strong><code>~/skills/skill-creator/SKILL.md</code></span>
@@ -303,6 +304,7 @@ export function LandingPage() {
 
         <article className="landing-feature landing-feature--editor">
           <div className="landing-editor-preview" aria-label="全局规则编辑器预览">
+            <span className="landing-preview-note">示意数据</span>
             <div className="landing-editor-files">
               <strong>全局规则</strong>
               <span className="is-active"><img src="/icons/codex.svg" alt="" /> AGENTS.md</span>
@@ -312,7 +314,6 @@ export function LandingPage() {
             <pre><span># Working agreement</span>{`\n\n`}## Quality{`\n`}- Verify before done{`\n`}- Keep changes focused{`\n`}- Prefer root-cause fixes{`\n\n`}## Skills{`\n`}- Reuse shared skills</pre>
           </div>
           <div className="landing-feature__copy">
-            <span className="landing-feature__tag">全局规则</span>
             <h3>不同 Agent，一套维护方式。</h3>
             <p>
               定位并编辑每个 Agent 的全局规则文件，实时预览内容，保存前保留明确边界。
@@ -322,7 +323,6 @@ export function LandingPage() {
 
         <article className="landing-feature landing-feature--install">
           <div className="landing-feature__copy">
-            <span className="landing-feature__tag">安装与整理</span>
             <h3>从仓库或本地路径，直接发现 Skills。</h3>
             <p>
               支持 GitHub、SSH 与本地目录，自动发现包含 <code>SKILL.md</code> 的技能，
@@ -330,10 +330,11 @@ export function LandingPage() {
             </p>
           </div>
           <div className="landing-install-preview">
+            <span className="landing-preview-note">示意数据</span>
             <div className="landing-install-field">
               <span>来源</span>
               <code>github.com/example/agent-skills</code>
-              <button type="button" tabIndex={-1}>扫描</button>
+              <span className="landing-install-action" aria-hidden="true">扫描</span>
             </div>
             <div className="landing-discovery-row">
               <FileCode2 size={18} />
