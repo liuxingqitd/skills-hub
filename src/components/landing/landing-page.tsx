@@ -215,37 +215,20 @@ export function LandingPage() {
       </nav>
 
       <section className="landing-hero" id="top">
+
         <div className="landing-hero__copy">
           <h1>Skills Hub工作台</h1>
           <h2>把所有 Agent 的 Skills，放回同一个工作台</h2>
-          <p>
-            在一个本地工作台中浏览、比较与同步 Skills。文件系统就是数据源，
-            每次差异和变更都清楚可见。
-          </p>
+          <p>在一个本地工作台中浏览、比较与同步 Skills。文件系统就是数据源，每次差异和变更都清楚可见。</p>
           <div className="landing-hero__actions">
-            <a
-              className="landing-cta landing-cta--primary"
-              href="https://github.com/liuxingqitd/skills-hub/releases"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <Download size={16} /> 下载桌面版
-            </a>
-            <a
-              className="landing-cta landing-cta--secondary"
-              href="https://github.com/liuxingqitd/skills-hub"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <Github size={16} /> 查看 GitHub
-            </a>
+            <a className="landing-cta landing-cta--primary" href="https://github.com/liuxingqitd/skills-hub/releases" target="_blank" rel="noreferrer"><Download size={16} /> 下载桌面版</a>
+            <a className="landing-cta landing-cta--secondary" href="https://github.com/liuxingqitd/skills-hub" target="_blank" rel="noreferrer"><Github size={16} /> 查看 GitHub</a>
           </div>
           <div className="landing-hero__facts" aria-label="产品信息">
-            <span><Check size={13} /> 本地优先</span>
-            <span><Check size={13} /> MIT 开源</span>
-            <span>macOS 与 Windows</span>
+            <span><Check size={13} /> 本地优先</span><span><Check size={13} /> MIT 开源</span><span>macOS 与 Windows</span>
           </div>
         </div>
+
 
         <ProductWindow />
       </section>
