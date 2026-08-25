@@ -33,7 +33,10 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
           }}
         />
         <AppShell isDesktopBuild={isDesktopBuild}>{children}</AppShell>
-      </body>
+      {/* impeccable-live-start */}
+<script src="http://localhost:8401/live.js?token=6572963a-6517-423a-babd-d006dd40f6c0"></script>
+{/* impeccable-live-end */}
+</body>
     </html>
   );
 }
