@@ -2000,6 +2000,8 @@ textarea {
    ============================================================ */
 .landing-page {
   --landing-max: 1380px;
+  --muted: oklch(42% 0.018 240);
+  --muted2: oklch(46% 0.014 240);
   min-height: 100%;
   overflow: hidden;
   background: oklch(98.2% 0.003 190);
@@ -2425,7 +2427,7 @@ html:has(.landing-page)::-webkit-scrollbar-thumb {
   border-radius: 6px;
   background: var(--surface2);
   color: var(--muted);
-  font: 600 9px/1 var(--font);
+  font: 600 12px/1 var(--font);
 }
 
 .landing-table-tools {
@@ -2446,13 +2448,13 @@ html:has(.landing-page)::-webkit-scrollbar-thumb {
 }
 
 .landing-segmented span {
-  min-height: 31px;
+  min-height: 34px;
   padding: 0 13px;
   display: grid;
   place-items: center;
   border-right: 1px solid var(--border);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .landing-segmented span:last-child {
@@ -2467,7 +2469,7 @@ html:has(.landing-page)::-webkit-scrollbar-thumb {
 
 .landing-search {
   width: min(310px, 36%);
-  min-height: 32px;
+  min-height: 34px;
   padding: 0 11px;
   display: flex;
   align-items: center;
@@ -2476,7 +2478,7 @@ html:has(.landing-page)::-webkit-scrollbar-thumb {
   border-radius: 8px;
   background: var(--surface);
   color: var(--muted2);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .landing-skill-matrix {
@@ -2510,7 +2512,7 @@ html:has(.landing-page)::-webkit-scrollbar-thumb {
 .landing-matrix-row--head {
   min-height: 46px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -2561,7 +2563,7 @@ html:has(.landing-page)::-webkit-scrollbar-thumb {
 .landing-skill-name small {
   overflow: hidden;
   color: var(--muted2);
-  font: 9px/1.4 var(--font-mono);
+  font: 11px/1.4 var(--font-mono);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2572,18 +2574,18 @@ html:has(.landing-page)::-webkit-scrollbar-thumb {
   border-radius: 5px;
   background: var(--surface2);
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .landing-status {
-  min-height: 24px;
-  padding: 0 7px;
+  min-height: 26px;
+  padding: 0 8px;
   display: inline-flex;
   align-items: center;
   gap: 4px;
   border: 1px solid;
   border-radius: 6px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -2614,7 +2616,7 @@ html:has(.landing-page)::-webkit-scrollbar-thumb {
   justify-content: flex-end;
   gap: 18px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .landing-matrix-footer span {
@@ -2779,7 +2781,7 @@ html:has(.landing-page)::-webkit-scrollbar-thumb {
   overflow: hidden;
   margin-top: 3px;
   color: var(--muted2);
-  font-size: 10px;
+  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2789,7 +2791,7 @@ html:has(.landing-page)::-webkit-scrollbar-thumb {
   border-radius: 6px;
   background: color-mix(in oklch, var(--accent) 9%, white);
   color: var(--accent2);
-  font-size: 10px;
+  font-size: 11px;
   font-style: normal;
   font-weight: 700;
 }
@@ -2864,7 +2866,7 @@ html:has(.landing-page)::-webkit-scrollbar-thumb {
 .landing-agent-targets .landing-agent {
   width: 100%;
   overflow: hidden;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .landing-editor-preview {
@@ -2890,7 +2892,7 @@ html:has(.landing-page)::-webkit-scrollbar-thumb {
 .landing-editor-files strong {
   padding: 0 9px 12px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -2903,7 +2905,7 @@ html:has(.landing-page)::-webkit-scrollbar-thumb {
   gap: 8px;
   border-radius: 7px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .landing-editor-files span.is-active {
@@ -2958,7 +2960,7 @@ html:has(.landing-page)::-webkit-scrollbar-thumb {
   border-right: 1px solid var(--border);
   background: var(--surface2);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -2966,7 +2968,7 @@ html:has(.landing-page)::-webkit-scrollbar-thumb {
   overflow: hidden;
   padding: 0 12px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2978,7 +2980,7 @@ html:has(.landing-page)::-webkit-scrollbar-thumb {
   place-items: center;
   background: var(--accent);
   color: white;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -3007,7 +3009,7 @@ html:has(.landing-page)::-webkit-scrollbar-thumb {
 .landing-discovery-row small {
   margin-top: 3px;
   color: var(--muted);
-  font: 10px/1.4 var(--font-mono);
+  font: 11px/1.4 var(--font-mono);
 }
 
 .landing-open-source {
@@ -3203,7 +3205,7 @@ html:has(.landing-page)::-webkit-scrollbar-thumb {
 
   .landing-product-nav {
     padding: 0 8px;
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .landing-workbench {
@@ -3355,7 +3357,7 @@ html:has(.landing-page)::-webkit-scrollbar-thumb {
 
   .landing-editor-preview pre {
     padding: 20px 16px;
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .landing-install-preview {

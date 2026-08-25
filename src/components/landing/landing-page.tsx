@@ -216,7 +216,7 @@ export function LandingPage() {
 
       <section className="landing-hero" id="top">
         <div className="landing-hero__copy">
-          <h1>Skills Hub</h1>
+          <h1>Skills Hub工作台</h1>
           <h2>把所有 Agent 的 Skills，放回同一个工作台</h2>
           <p>
             在一个本地工作台中浏览、比较与同步 Skills。文件系统就是数据源，
