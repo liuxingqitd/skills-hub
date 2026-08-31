@@ -214,8 +214,7 @@ export function LandingPage() {
         </div>
       </nav>
 
-      <section className="landing-hero" id="top">
-
+      <section className="landing-hero landing-hero--split" id="top">
         <div className="landing-hero__copy">
           <h1>Skills Hub工作台</h1>
           <h2>把所有 Agent 的 Skills，放回同一个工作台</h2>
@@ -228,8 +227,6 @@ export function LandingPage() {
             <span><Check size={13} /> 本地优先</span><span><Check size={13} /> MIT 开源</span><span>macOS 与 Windows</span>
           </div>
         </div>
-
-
         <ProductWindow />
       </section>
 
